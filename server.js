@@ -201,12 +201,6 @@ app.get('/get-excel-summary', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// 6. Start Server (แก้ Port ให้รองรับ Render)
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
-});
-
 // API สำหรับนำเข้ารายชื่อ (รองรับหัวข้อภาษาไทยจาก Excel ของเพื่อน)
 app.post('/import-users', async (req, res) => {
     const { users } = req.body; 
@@ -235,3 +229,10 @@ app.post('/import-users', async (req, res) => {
         res.status(500).send("Error: " + err.message);
     }
 });
+
+// 6. Start Server (แก้ Port ให้รองรับ Render)
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
+});
+
