@@ -33,6 +33,14 @@
         <input type="file" id="fileInput" hidden accept=".xlsx, .xls">
     </div>
 
+    <div style="margin: 20px; padding: 20px; border: 1px solid #ccc; border-radius: 10px;">
+    <h3>📤 นำเข้าข้อมูลกำลังพล (CSV)</h3>
+    <input type="file" id="csvFile" accept=".csv" />
+    <button onclick="uploadCSV()">เริ่มนำเข้าข้อมูล</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
     <div id="status"></div>
 
     <button id="uploadBtn" class="btn-upload" onclick="sendToServer()" disabled>🚀 เริ่มนำเข้าข้อมูล</button>
@@ -104,4 +112,5 @@
 </script>
 
 </body>
+
 </html>
