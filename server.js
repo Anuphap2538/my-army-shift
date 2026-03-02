@@ -274,11 +274,27 @@ app.delete('/clear-shifts', async (req, res) => {
     }
 });
 
+// API สำหรับล้างรายชื่อทหารทั้งหมด (แดง)
+app.delete('/clear-all-users', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        // ต้องลบเวรก่อน เพราะเวรดึง ID จากรายชื่อไปใช้ (Foreign Key Constraint)
+        await connection.execute("DELETE FROM shift_assignments");
+        await connection.execute("DELETE FROM users"); 
+        await connection.end();
+        res.send('ok');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("ลบรายชื่อไม่สำเร็จ: " + err.message);
+    }
+});
+
 // 6. Start Server (แก้ Port ให้รองรับ Render)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
+
 
 
 
