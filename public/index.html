@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ระบบนำเข้าข้อมูลข้าราชการ | Excel to MySQL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; width: 450px; }
+        .icon-box { font-size: 50px; margin-bottom: 20px; }
+        .drop-zone { border: 2px dashed #2563eb; padding: 40px 20px; border-radius: 15px; background: #f8faff; cursor: pointer; transition: 0.3s; margin-bottom: 20px; }
+        .drop-zone:hover { background: #eef2ff; border-color: #1d4ed8; }
+        .btn-upload { background: #2563eb; color: white; border: none; padding: 15px; border-radius: 12px; font-weight: 600; width: 100%; cursor: pointer; font-size: 16px; }
+        .btn-upload:disabled { background: #cbd5e1; cursor: not-allowed; }
+        #status { margin-top: 15px; font-size: 14px; font-weight: 600; }
+        .nav-link { margin-top: 20px; display: block; color: #64748b; text-decoration: none; font-size: 14px; }
+        .nav-link:hover { color: #2563eb; }
+        
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="icon-box">📊</div>
+    <h2>นำเข้าข้อมูลข้าราชการ</h2>
+    <p style="color: #64748b; margin-bottom: 25px;">
+    อัปโหลดไฟล์ Excel (.xlsx) เพื่อบันทึกรายชื่อ <br>
+    <small style="color: #ef4444;">*ในไฟล์ต้องมีคอลัมน์: rank_name, role, และ email</small>
+</p>
+
+    <div class="drop-zone" onclick="document.getElementById('fileInput').click()">
+        <span id="dropZoneText">📁 คลิกเพื่อเลือกไฟล์ Excel</span>
+        <input type="file" id="fileInput" hidden accept=".xlsx, .xls">
+    </div>
+
+    <div id="status"></div>
+
+    <button id="uploadBtn" class="btn-upload" onclick="sendToServer()" disabled>🚀 เริ่มนำเข้าข้อมูล</button>
+
+    <a href="/manage.html" class="nav-link">ไปหน้าจัดการเวร →</a>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+    let excelData = [];
+
+    // เมื่อเลือกไฟล์
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        document.getElementById('dropZoneText').innerText = "📄เลือกไฟล์แล้ว: " + file.name;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            
+            // อ่าน Sheet แรก
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // แปลงเป็น JSON (ดึงข้อมูลมาเก็บในตัวแปร)
+            excelData = XLSX.utils.sheet_to_json(worksheet);
+            
+            if (excelData.length > 0) {
+                document.getElementById('status').innerHTML = `<span style="color: #059669;">พบข้อมูลทั้งหมด ${excelData.length} รายการ พร้อมอัปโหลด</span>`;
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    // ส่งข้อมูลไปที่ server.js
+    async function sendToServer() {
+        const btn = document.getElementById('uploadBtn');
+        const statusDiv = document.getElementById('status');
+        
+        btn.innerText = "กำลังประมวลผล...";
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/upload-users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(excelData)
+            });
+
+            const result = await response.text();
+
+            if (response.ok) {
+                statusDiv.innerHTML = `<span style="color: #2563eb;">${result}</span>`;
+                btn.innerText = "สำเร็จแล้ว!";
+            } else {
+                throw new Error(result);
+            }
+        } catch (err) {
+            statusDiv.innerHTML = `<span style="color: #ef4444;">❌ ผิดพลาด: ${err.message}</span>`;
+            btn.innerText = "ลองใหม่อีกครั้ง";
+            btn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>

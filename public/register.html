@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ลงทะเบียนรับตารางเวร | กองพันทหารอากาศโยธิน</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .reg-card { background: white; color: #1e293b; padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; }
+        .logo { font-size: 50px; margin-bottom: 10px; }
+        h2 { margin-bottom: 5px; color: #1e3a8a; }
+        p { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 12px; font-family: inherit; font-size: 16px; margin-bottom: 20px; }
+        .btn-google { background: #ffffff; border: 1px solid #dadce0; color: #3c4043; padding: 12px; border-radius: 12px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-weight: 600; text-decoration: none; transition: 0.2s; }
+        .btn-google:hover { background: #f8f9fa; border-color: #d2e3fc; }
+        .google-icon { width: 20px; }
+        .status-msg { margin-top: 15px; font-size: 13px; color: #ef4444; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="reg-card">
+    <div class="logo">🎖️</div>
+    <h2>ลงทะเบียนครั้งแรก</h2>
+    <p>เลือกชื่อของท่านเพื่อเชื่อมต่อตารางเวรเข้ากับ Google Calendar</p>
+
+    <select id="userSelect">
+        <option value="">-- กำลังโหลดรายชื่อ --</option>
+    </select>
+
+    <a href="#" id="authLink" class="btn-google" onclick="checkSelection(event)">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_Color_Icon.svg" class="google-icon">
+        เชื่อมต่อด้วย Google
+    </a>
+
+    <div id="errorMsg" class="status-msg">⚠️ กรุณาเลือกชื่อของท่านก่อนกดเชื่อมต่อ</div>
+</div>
+
+<script>
+    // 1. โหลดรายชื่อจาก Database มาให้เลือก
+    async function fetchUsers() {
+        const res = await fetch('/get-users');
+        const users = await res.json();
+        const select = document.getElementById('userSelect');
+        select.innerHTML = '<option value="">-- ค้นหาชื่อ-นามสกุล --</option>';
+        
+        users.forEach(u => {
+            // โชว์เฉพาะคนที่ยังไม่มี Token (ยังไม่ได้ลงทะเบียน)
+            if (!u.google_token) {
+                select.innerHTML += `<option value="${u.id}">${u.rank_name}</option>`;
+            }
+        });
+    }
+
+    // 2. ตรวจสอบก่อนส่งไปหน้า Google Auth
+    function checkSelection(e) {
+        const userId = document.getElementById('userSelect').value;
+        if (!userId) {
+            e.preventDefault();
+            document.getElementById('errorMsg').style.display = 'block';
+        } else {
+            // ส่ง userId ไปที่ API /google/auth ของเรา
+            window.location.href = `/google/auth?user_id=${userId}`;
+        }
+    }
+
+    fetchUsers();
+
+    // ในหน้า register.html ตรงฟังก์ชันที่กดปุ่มเชื่อมต่อ
+function connectGoogle() {
+    const userId = document.getElementById('userSelect').value; // ดึง ID คนที่เลือก
+    if (!userId) {
+        alert("กรุณาเลือกชื่อก่อนครับ!");
+        return;
+    }
+    // ส่ง userId ไปที่ server ผ่าน query string
+    window.location.href = `/google/auth?user_id=${userId}`;
+}
+</script>
+
+</body>
+</html>

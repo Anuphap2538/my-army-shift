@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ระบบจัดการเวร | จัดการเข้าเวร</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; }
+        body { font-family: 'Sarabun', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .app-container { max-width: 1400px; margin: auto; display: grid; grid-template-columns: 350px 1fr; gap: 20px; }
+        .sidebar { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: fit-content; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #475569; }
+        select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-family: inherit; font-size: 1rem; }
+        .btn-primary { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
+        .btn-primary:hover { background: #1e40af; }
+        .main-content { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        #calendar { min-height: 650px; }
+        #shiftSection { background: #eef2ff; padding: 15px; border-radius: 10px; border: 1px solid #2563eb; display: none; margin-bottom: 20px; }
+        .shift-label { pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="sidebar">
+        <h2 style="color:var(--primary); margin-top:0;">📋 ลงข้อมูลเวร</h2>
+        
+        <div class="form-group">
+            <label>1. เลือกหน้าที่ (Role)</label>
+            <select id="roleFilter" onchange="updateSelection()">
+                <option value="">-- กำลังโหลดข้อมูล --</option>
+            </select>
+        </div>
+
+        <div id="shiftSection" class="form-group">
+            <label style="color: #2563eb;">🕒 เลือกผลัดที่จะลง (เวรวิทยุ)</label>
+            <select id="workShift">
+                <option value="1">ผลัด 1</option>
+                <option value="2">ผลัด 2</option>
+                <option value="3">ผลัด 3</option>
+            </select>
+            <small style="color: #64748b;">*เปลี่ยนผลัดแล้วค่อยจิ้มวันที่ในปฏิทิน</small>
+        </div>
+
+        <div class="form-group">
+            <label>2. รายชื่อกำลังพล</label>
+            <select id="userSelect">
+                <option value="">-- เลือกหน้าที่ก่อน --</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>3. สังกัด/กลุ่มงาน</label>
+            <select id="groupFilter">
+                <option value="กองพัน">กองพัน</option>
+                <option value="ศปก.">ศปก.</option>
+            </select>
+        </div>
+
+        <button class="btn-primary" onclick="saveShift()">💾 บันทึกการจัดเวร</button>
+
+        <button onclick="location.href='/'" style="width:100%; background-color: #facc15; color: #1e293b; padding: 12px; border:none; border-radius: 10px; cursor:pointer; font-weight:bold; margin-bottom: 15px;">🏠 กลับหน้าหลัก</button>
+
+        <div style="display: flex; justify-content: center; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+            <button onclick="clearAllShifts()" style="background-color: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                🗑️ ล้างข้อมูลเวรทั้งหมด
+            </button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div id="calendar"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+<script>
+    let allUsers = [];
+    let selectedData = {}; // เก็บข้อมูล { "วันที่": "ผลัด" }
+    let calendar;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const calendarEl = document.getElementById('calendar');
+        calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'th',
+            selectable: true,
+            headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
+            select: function(info) {
+                const date = info.startStr;
+                const role = document.getElementById('roleFilter').value;
+                const currentShift = document.getElementById('workShift').value;
+                const cell = document.querySelector(`[data-date="${date}"]`);
+
+                if(selectedData[date]) {
+                    delete selectedData[date];
+                    if (cell) {
+                        cell.style.setProperty('background-color', '', 'important');
+                        const label = cell.querySelector('.shift-label');
+                        if(label) label.remove();
+                    }
+                } else {
+                    // ถ้าเป็นวิทยุ ให้ใช้ค่าจากช่องเลือกผลัด ถ้าไม่ใช่ให้เป็น 1
+                    const shiftValue = role.includes("วิทยุ") ? currentShift : "1";
+                    selectedData[date] = shiftValue;
+                    
+                    if (cell) {
+                        cell.style.setProperty('background-color', '#dbeafe', 'important');
+                        const shiftText = role.includes("วิทยุ") ? ` (ผ.${shiftValue})` : "";
+                        cell.insertAdjacentHTML('beforeend', `<div class="shift-label" style="font-size:11px; font-weight:bold; color:blue; padding:2px; pointer-events:none;">📍 เลือก${shiftText}</div>`);
+                    }
+                }
+                calendar.unselect();
+            }
+        });
+        calendar.render();
+
+        try {
+            const res = await fetch('/get-users');
+            allUsers = await res.json();
+            const roleSelect = document.getElementById('roleFilter');
+            const uniqueRoles = [...new Set(allUsers.map(u => u.role.trim()))];
+            roleSelect.innerHTML = '<option value="">-- เลือกหน้าที่ --</option>';
+            uniqueRoles.sort().forEach(r => {
+                if(r) roleSelect.innerHTML += `<option value="${r}">${r}</option>`;
+            });
+        } catch (e) { console.error("โหลดข้อมูลล้มเหลว"); }
+    });
+
+    function updateSelection() {
+        const role = document.getElementById('roleFilter').value;
+        const userSelect = document.getElementById('userSelect');
+        const shiftSection = document.getElementById('shiftSection');
+        userSelect.innerHTML = '<option value="">-- เลือกชื่อคน --</option>';
+        
+        // โชว์ช่องเลือกผลัดเฉพาะวิทยุ
+        shiftSection.style.display = role.includes("วิทยุ") ? 'block' : 'none';
+
+        const filtered = allUsers.filter(u => u.role.trim() === role.trim());
+        filtered.forEach(u => {
+            userSelect.innerHTML += `<option value="${u.id}">${u.rank_name}</option>`;
+        });
+    }
+
+    async function saveShift() {
+        const userId = document.getElementById('userSelect').value;
+        const roleType = document.getElementById('roleFilter').value;
+        const groupName = document.getElementById('groupFilter').value;
+        const dates = Object.keys(selectedData);
+
+        if (!userId || dates.length === 0) {
+            alert("กรุณาเลือกรายชื่อและวันที่บนปฏิทินก่อนครับ");
+            return;
+        }
+
+        let success = 0;
+        for (const date of dates) {
+            const payload = {
+                user_id: userId,
+                shift_date: date,
+                role_type: roleType,
+                group_name: groupName,
+                shift_turn: selectedData[date],
+                note: ""
+            };
+
+            try {
+                const res = await fetch('/assign-shift', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) success++;
+            } catch (err) { console.error(err); }
+        }
+
+        if (success > 0) {
+            alert(`✅ บันทึกสำเร็จ ${success} รายการ`);
+            location.reload();
+        } else {
+            alert("❌ บันทึกไม่สำเร็จ เช็คจอดำ (Terminal)");
+        }
+    }
+
+    async function clearAllShifts() {
+        if (confirm("⚠️ ยืนยันการลบข้อมูลเวรทั้งหมด?")) {
+            try {
+                const res = await fetch('/clear-shifts');
+                const msg = await res.text();
+                alert(msg);
+                location.reload();
+            } catch (err) { alert("ลบข้อมูลไม่สำเร็จ"); }
+        }
+    }
+</script>
+</body>
+</html>
