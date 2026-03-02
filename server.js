@@ -230,11 +230,26 @@ app.post('/import-users', async (req, res) => {
     }
 });
 
+// API สำหรับล้างข้อมูลผู้ใช้ทั้งหมด
+app.delete('/clear-all-users', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        // ลบข้อมูลในตาราง users ทั้งหมด
+        await connection.execute("TRUNCATE TABLE users");
+        await connection.end();
+        res.send('ok');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("ลบไม่สำเร็จ: " + err.message);
+    }
+});
+
 // 6. Start Server (แก้ Port ให้รองรับ Render)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
+
 
 
 
