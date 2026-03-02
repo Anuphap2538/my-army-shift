@@ -1,5 +1,5 @@
 const express = require('express');
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2/promise'); // ประกาศครั้งเดียวพอ
 const path = require('path');
 const { google } = require('googleapis');
 const session = require('express-session');
@@ -16,51 +16,55 @@ app.use(session({
 }));
 
 // 2. ตั้งค่า Database
-const mysql = require('mysql2/promise');
-
 const dbConfig = {
-    host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com', // 👈 ก๊อปจากหน้า Connect
-    user: '//EqdV8U5ZwzH6aqD.root',                                     // 👈 ก๊อปจากหน้า Connect
-    password: '@gateway01.ap-southeast-1.',                       // 👈 รหัสที่เพื่อนจดไว้
-    database: 'shift_db',                                   // 👈 ใส่ชื่อนี้ไว้ก่อน
+    host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
+    user: '//EqdV8U5ZwzH6aqD.root', // 👈 เช็คดีๆ นะว่าก๊อปมาครบไหม
+    password: '@gateway01.ap-southeast-1.', // 👈 รหัสผ่าน TiDB ของเพื่อน
+    database: 'shift_db',
     port: 4000,
     ssl: {
         minVersion: 'TLSv1.2',
-        rejectUnauthorized: true                            // 👈 บรรทัดนี้ห้ามลืม!
+        rejectUnauthorized: true
     }
 };
+
+// ฟังก์ชันสำหรับดึง Connection (เพิ่มเข้าไปให้แล้ว)
+async function getConnection() {
+    return await mysql.createConnection(dbConfig);
+}
 
 // ฟังก์ชันทดสอบการเชื่อมต่อ
 async function testConnection() {
     try {
-        const connection = await mysql.createConnection(dbConfig);
+        const connection = await getConnection();
         console.log("✅ เชื่อมต่อฐานข้อมูล Cloud สำเร็จแล้วเพื่อน!");
         await connection.end();
     } catch (err) {
         console.error("❌ เชื่อมต่อไม่ได้เพราะ: ", err.message);
     }
 }
-
 testConnection();
 
-// 3. ตั้งค่า Google OAuth
+// 3. ตั้งค่า Google OAuth 
+// ⚠️ อย่าลืมเปลี่ยน http://localhost:3000 เป็น URL ของ Render เพื่อนนะ!
+const REDIRECT_URI = process.env.RENDER_EXTERNAL_URL 
+    ? `${process.env.RENDER_EXTERNAL_URL}/google/callback` 
+    : 'http://localhost:3000/google/callback';
+
 const oauth2Client = new google.auth.OAuth2(
     '1055278075819-3degsqjsed1f3o8k35doqot6f45ih9re.apps.googleusercontent.com',
     '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',
-    'http://localhost:3000/google/callback'
+    REDIRECT_URI
 );
 
-// --- 🌟 ฟังก์ชันหลักสำหรับส่งเข้า Calendar (มีอันเดียวพอ!) 🌟 ---
+// --- 🌟 ฟังก์ชันหลักสำหรับส่งเข้า Calendar 🌟 ---
 async function addDutyToCalendar(summary, date, tokenJson) {
-    if (!tokenJson) {
-        console.log("❌ ไม่มี Token สำหรับรายการนี้");
-        return false;
-    }
+    if (!tokenJson) return false;
     try {
         const userAuth = new google.auth.OAuth2(
             '1055278075819-3degsqjsed1f3o8k35doqot6f45ih9re.apps.googleusercontent.com',
             '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',
-            'http://localhost:3000/google/callback'
+            REDIRECT_URI
         );
         userAuth.setCredentials(JSON.parse(tokenJson));
         const calendar = google.calendar({ version: 'v3', auth: userAuth });
@@ -110,15 +114,13 @@ app.get('/google/callback', async (req, res) => {
     }
 });
 
-// --- 5. API สำหรับหน้าจัดการและรายงาน ---
-
-// 🔥 ปุ่มซิงค์เวรทั้งหมด
+// --- 5. API ต่างๆ (ใช้ getConnection ที่สร้างใหม่) ---
 app.post('/sync-existing-shifts', async (req, res) => {
     const { month, year, group } = req.query;
     try {
         const connection = await getConnection();
         const sql = `
-            SELECT s.shift_date, s.role_type, s.shift_turn, u.rank_name, u.google_token 
+            SELECT s.shift_date, s.role_type, u.rank_name, u.google_token 
             FROM shift_assignments s
             JOIN users u ON s.user_id = u.id
             WHERE u.google_token IS NOT NULL 
@@ -128,9 +130,7 @@ app.post('/sync-existing-shifts', async (req, res) => {
         `;
         const [shifts] = await connection.execute(sql, [month, year, group]);
         await connection.end();
-
-        if (shifts.length === 0) return res.send("❌ ไม่พบเวรที่ซิงค์ได้ (กำลังพลอาจยังไม่ลงทะเบียน)");
-
+        if (shifts.length === 0) return res.send("❌ ไม่พบเวรที่ซิงค์ได้");
         let successCount = 0;
         for (const shift of shifts) {
             const summary = `${shift.role_type} (${shift.rank_name})`;
@@ -138,9 +138,7 @@ app.post('/sync-existing-shifts', async (req, res) => {
             if (isDone) successCount++;
         }
         res.send(`✅ ซิงค์สำเร็จ ${successCount} รายการ`);
-    } catch (err) {
-        res.status(500).send(err.message);
-    }
+    } catch (err) { res.status(500).send(err.message); }
 });
 
 app.get('/get-users', async (req, res) => {
@@ -164,7 +162,6 @@ app.post('/assign-shift', async (req, res) => {
         await connection.execute("INSERT INTO shift_assignments (user_id, shift_date, role_type, group_name, shift_turn, note) VALUES (?, ?, ?, ?, ?, ?)", [user_id, shift_date, role_type, group_name, shift_turn, note || '']);
         const [user] = await connection.execute("SELECT google_token, rank_name FROM users WHERE id = ?", [user_id]);
         await connection.end();
-
         if (user.length > 0 && user[0].google_token) {
             const summary = `${role_type} (${user[0].rank_name})`;
             await addDutyToCalendar(summary, shift_date, user[0].google_token);
@@ -204,10 +201,8 @@ app.get('/get-excel-summary', async (req, res) => {
     } catch (err) { res.status(500).send(err.message); }
 });
 
-// 6. Start Server
-const PORT = 3000;
+// 6. Start Server (แก้ Port ให้รองรับ Render)
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log("========================================");
-    console.log(`🚀 ระบบพร้อมใช้งานที่: http://localhost:${PORT}`);
-    console.log("========================================");
+    console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
