@@ -63,16 +63,22 @@
 
         <button onclick="location.href='/'" style="width:100%; background-color: #facc15; color: #1e293b; padding: 12px; border:none; border-radius: 10px; cursor:pointer; font-weight:bold; margin-bottom: 15px;">🏠 กลับหน้าหลัก</button>
 
-        <button onclick="clearAllUsers()" style="background-color: #ff4d4d; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">
-    🗑️ ล้างรายชื่อทั้งหมด
-</button>   
-        
-        <div style="display: flex; justify-content: center; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
-            <button onclick="clearAllShifts()" style="background-color: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
-                🗑️ ล้างข้อมูลเวรทั้งหมด
-            </button>
         </div>
     </div>
+
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
+    <h3 style="font-size: 14px; color: #64748b; margin-bottom: 15px;">🛠️ จัดการฐานข้อมูล</h3>
+    
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button onclick="clearAllShifts()" style="background-color: #f97316; color: white; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            ⚠️ ล้างข้อมูลเวรทั้งหมด (ปฏิทิน)
+        </button>
+
+        <button onclick="clearAllUsers()" style="background-color: #ef4444; color: white; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            🗑️ ล้างรายชื่อทหารทั้งหมด (Excel)
+        </button>
+    </div>
+</div>
 
     <div class="main-content">
         <div id="calendar"></div>
@@ -227,4 +233,5 @@
 </body>
 
 </html>
+
 
