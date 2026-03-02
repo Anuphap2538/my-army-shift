@@ -274,20 +274,27 @@ app.delete('/clear-shifts', async (req, res) => {
     }
 });
 
-// แก้เป็น app.delete และเช็คชื่อ Path ให้ตรงกับที่หน้าบ้านเรียก
-app.delete('/clear-all-users', async (req, res) => {
-    let connection;
+// เปลี่ยนเป็น app.get ให้หมดเพื่อน จะได้ไม่ติด Method Not Allowed
+app.get('/clear-all-users', async (req, res) => {
     try {
-        connection = await getConnection();
-        // ต้องลบตารางเวรก่อนเสมอไม่งั้นติด Error Foreign Key
+        const connection = await getConnection();
         await connection.execute("DELETE FROM shift_assignments");
         await connection.execute("DELETE FROM users"); 
         await connection.end();
         res.send('ok');
     } catch (err) {
-        if (connection) await connection.end();
-        console.error("Delete Error:", err);
-        res.status(500).send("ลบไม่สำเร็จ: " + err.message);
+        res.status(500).send(err.message);
+    }
+});
+
+app.get('/clear-shifts', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        await connection.execute("DELETE FROM shift_assignments");
+        await connection.end();
+        res.send('✅ ล้างข้อมูลเวรเรียบร้อย!');
+    } catch (err) {
+        res.status(500).send(err.message);
     }
 });
 
@@ -296,6 +303,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
+
 
 
 
