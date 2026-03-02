@@ -274,18 +274,21 @@ app.delete('/clear-shifts', async (req, res) => {
     }
 });
 
-// API สำหรับล้างรายชื่อทหารทั้งหมด (แดง)
+// API สำหรับล้างรายชื่อทหารทั้งหมด (ปุ่มแดง)
 app.delete('/clear-all-users', async (req, res) => {
+    let connection;
     try {
-        const connection = await getConnection();
-        // ต้องลบเวรก่อน เพราะเวรดึง ID จากรายชื่อไปใช้ (Foreign Key Constraint)
+        connection = await getConnection();
+        // 1. ต้องลบข้อมูลในตารางเวรก่อน (เพราะมันเชื่อมโยงกัน)
         await connection.execute("DELETE FROM shift_assignments");
+        // 2. ลบรายชื่อทั้งหมด
         await connection.execute("DELETE FROM users"); 
         await connection.end();
         res.send('ok');
     } catch (err) {
+        if (connection) await connection.end();
         console.error(err);
-        res.status(500).send("ลบรายชื่อไม่สำเร็จ: " + err.message);
+        res.status(500).send("ลบไม่สำเร็จ: " + err.message);
     }
 });
 
@@ -294,6 +297,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
+
 
 
 
