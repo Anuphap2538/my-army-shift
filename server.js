@@ -19,7 +19,7 @@ app.use(session({
 const dbConfig = {
     host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
     user: '2FUpHhTtXJDwkTV.root', // 👈 เช็คดีๆ นะว่าก๊อปมาครบไหม
-    password: '@gateway01.ap-southeast-1.', // 👈 รหัสผ่าน TiDB ของเพื่อน
+    password: 'UikEOsL5EdIDomNr', // 👈 รหัสผ่าน TiDB ของเพื่อน
     database: 'shift_db',
     port: 4000,
     ssl: {
@@ -235,5 +235,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
+
 
 
