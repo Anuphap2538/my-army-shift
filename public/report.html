@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Duty Dashboard | ระบบสรุปเวรกองพัน</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary: #4f46e5;
             --success: #10b981;
-            --danger: #ef4444;
+            --danger: #ef4444; /* สีแดงสำหรับกองพัน */
+            --army-blue: #1e40af; /* สีน้ำเงินสำหรับ ศปก. */
             --glass: rgba(255, 255, 255, 0.8);
             --border: rgba(255, 255, 255, 0.3);
         }
@@ -22,7 +22,6 @@
             background-attachment: fixed;
         }
 
-        /* Header & Navigation */
         .top-navigation {
             max-width: 1200px; margin: 0 auto 25px auto;
             display: flex; justify-content: space-between; align-items: center;
@@ -32,64 +31,62 @@
         }
 
         .brand-area { display: flex; align-items: center; gap: 15px; }
-        .logo-img { width: 55px; height: auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
-        .brand-text h1 { margin: 0; font-size: 24px; color: var(--primary); font-weight: 700; }
+        .logo-img { width: 55px; height: auto; }
+        .brand-text h1 { margin: 0; font-size: 24px; color: var(--primary); }
 
         .controls-wrapper { display: flex; align-items: center; gap: 12px; }
+
+        /* แยกสีปุ่มตามที่สั่ง */
+        .btn-kongpan { 
+            background: var(--danger) !important; 
+            color: white !important; border: none !important;
+        }
+        .btn-spk { 
+            background: var(--army-blue) !important; 
+            color: white !important; border: none !important;
+        }
+        .btn-kongpan:hover, .btn-spk:hover { opacity: 0.9; transform: scale(1.05); }
+
         select, .btn-nav {
             padding: 10px 18px; border-radius: 12px; border: 1px solid #e2e8f0;
             font-family: inherit; font-weight: 600; cursor: pointer; transition: 0.2s;
         }
 
-        .btn-sync-highlight {
-            background: var(--success); color: white; border: none;
-            padding: 10px 25px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-        }
-
-        /* Calendar */
+        /* ปฏิทิน */
         .calendar-container {
             max-width: 1200px; margin: 0 auto; background: var(--glass);
             backdrop-filter: blur(10px); border-radius: 30px; padding: 20px;
-            border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,0.03);
         }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
-        .weekday { padding: 10px; text-align: center; font-weight: 700; color: #94a3b8; font-size: 12px; }
+        .weekday { text-align: center; font-weight: 700; color: #94a3b8; font-size: 12px; padding-bottom: 10px;}
+        
         .day-cell {
-            min-height: 120px; background: white; border-radius: 18px; padding: 12px;
+            min-height: 110px; background: white; border-radius: 18px; padding: 10px;
             border: 1px solid #f1f5f9; transition: 0.3s; cursor: pointer;
+            display: flex; flex-direction: column; justify-content: flex-start;
         }
-        .day-cell:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-color: var(--primary); }
-        .date-number { font-size: 18px; font-weight: 700; color: #cbd5e1; }
-        .badge-boss { background: #eef2ff; color: #4f46e5; font-size: 10px; padding: 4px; border-radius: 6px; margin-top: 5px; display: block; }
+        .date-number { font-size: 16px; font-weight: 700; color: #cbd5e1; margin-bottom: 5px; }
+        
+        /* สไตล์ Badge ในปฏิทิน */
+        .badge-boss-name { 
+            font-size: 11px; color: #4f46e5; font-weight: 700; 
+            background: #eef2ff; padding: 4px; border-radius: 6px; 
+            margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .badge-total-count { font-size: 10px; color: #64748b; font-weight: 400; }
 
-        /* Modal / PopUp */
+        /* Modal */
         .modal {
             display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6);
             backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center;
         }
-        .modal-content {
-            background: white; width: 90%; max-width: 500px; border-radius: 24px; overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        }
-        .modal-header { background: var(--primary); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .modal-content { background: white; width: 90%; max-width: 450px; border-radius: 24px; overflow: hidden; }
+        .modal-header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; }
         .modal-body { padding: 20px; max-height: 400px; overflow-y: auto; }
-        
-        .duty-card {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px; border: 1px solid #f1f5f9; border-radius: 12px; margin-bottom: 8px;
-        }
-        .btn-del { background: #fff1f2; color: var(--danger); border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: 700; }
-        .btn-del:hover { background: var(--danger); color: white; }
+        .duty-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #f1f5f9; }
+        .btn-del-mini { color: var(--danger); border: none; background: #fff1f2; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 12px;}
 
-        /* Print Style */
-        #printTable { display: none; }
-        @media print {
-            .no-print { display: none !important; }
-            #printTable { display: table !important; width: 100%; border-collapse: collapse; margin-top: 20px; }
-            #printTable th, #printTable td { border: 1px solid black; padding: 8px; text-align: left; color: black; }
-            body { background: white; padding: 0; }
-            .print-header { display: block !important; text-align: center; margin-bottom: 20px; }
-        }
+        @media print { .no-print { display: none !important; } #printTable { display: table !important; width: 100%; border: 1px solid #000; } }
     </style>
 </head>
 <body>
@@ -99,7 +96,7 @@
         <img src="images/air.png" alt="Logo" class="logo-img"> 
         <div class="brand-text">
             <h1>Duty Dashboard</h1>
-            <p id="subtext" style="margin:0; font-size:13px; color:#64748b;">ระบบสรุปยอดเวรรายเดือน</p>
+            <p id="subtext" style="margin:0; font-size:12px;">ระบบสรุปยอดเวรรายเดือน</p>
         </div>
     </div>
 
@@ -108,44 +105,35 @@
             <option value="3">มีนาคม</option>
             <option value="4">เมษายน</option>
         </select>
-        <button class="btn-nav" onclick="renderReport('กองพัน')">เวรกองพัน</button>
-        <button class="btn-nav" onclick="renderReport('ศปก.')">เวร ศปก.</button>
+        <button class="btn-nav btn-kongpan" onclick="renderReport('กองพัน')">เวรกองพัน (แดง)</button>
+        <button class="btn-nav btn-spk" onclick="renderReport('ศปก.')">เวร ศปก. (น้ำเงิน)</button>
         <button class="btn-nav" onclick="window.print()">🖨️ ปริ้นท์</button>
-        <button id="syncBtn" class="btn-nav btn-sync-highlight" onclick="syncAllToGoogle()">🔄 ซิงค์ข้อมูล</button>
     </div>
 </div>
 
 <div class="calendar-container no-print">
-    <div class="calendar-grid" id="weekdayHeader">
+    <div class="calendar-grid">
         <div class="weekday">อา.</div><div class="weekday">จ.</div><div class="weekday">อ.</div>
         <div class="weekday">พ.</div><div class="weekday">พฤ.</div><div class="weekday">ศ.</div><div class="weekday">ส.</div>
     </div>
     <div class="calendar-grid" id="calendarBody"></div>
 </div>
 
-<div class="print-header" style="display:none;">
-    <h2 id="printTitle">สรุปตารางเวร</h2>
-    <p id="printMonth">ประจำเดือน</p>
-</div>
-<table id="printTable">
-    <thead>
-        <tr><th>ยศ ชื่อ - สกุล</th><th>หน้าที่</th><th>วันที่เข้าเวร</th></tr>
-    </thead>
-    <tbody id="printTableBody"></tbody>
-</table>
-
 <div id="dutyModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 id="modalDateTitle" style="margin:0">รายละเอียด</h3>
-            <span style="cursor:pointer; font-size:24px" onclick="closeModal()">&times;</span>
+            <h3 id="modalTitle" style="margin:0">รายชื่อผู้เข้าเวร</h3>
+            <span style="cursor:pointer" onclick="closeModal()">✕</span>
         </div>
-        <div class="modal-body" id="modalBody"></div>
-        <div style="padding:15px; text-align:right; border-top:1px solid #eee;">
-            <button class="btn-nav" onclick="closeModal()">ปิดหน้าต่าง</button>
-        </div>
+        <div id="modalBody" class="modal-body"></div>
+        <div style="padding:15px; text-align:right;"><button class="btn-nav" onclick="closeModal()">ปิด</button></div>
     </div>
 </div>
+
+<table id="printTable" style="display:none; width:100%; border-collapse: collapse;" border="1">
+    <thead><tr><th>ยศ ชื่อ-สกุล</th><th>หน้าที่</th><th>วันที่เข้าเวร</th></tr></thead>
+    <tbody id="printTableBody"></tbody>
+</table>
 
 <script>
     let currentGroup = 'กองพัน';
@@ -154,11 +142,8 @@
     async function renderReport(group) {
         currentGroup = group;
         const month = document.getElementById('monthSelect').value;
-        const monthName = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
-        
-        document.getElementById('subtext').innerText = `กลุ่มงาน: ${group} | ประจำเดือน: ${monthName} 2569`;
-        document.getElementById('printTitle').innerText = `สรุปตารางเวร (${group})`;
-        document.getElementById('printMonth').innerText = `ประจำเดือน ${monthName} 2569`;
+        const monthLabel = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
+        document.getElementById('subtext').innerText = `กลุ่มงาน: ${group} | ${monthLabel} 2569`;
 
         try {
             const [resCal, resSum] = await Promise.all([
@@ -168,80 +153,64 @@
             const dataCal = await resCal.json();
             const dataSum = await resSum.json();
 
-            // จัดกลุ่มข้อมูลปฏิทิน
             fullData = {};
             dataCal.forEach(item => {
-                const day = new Date(item.shift_date).getDate();
-                if (!fullData[day]) fullData[day] = [];
-                fullData[day].push(item);
+                const d = new Date(item.shift_date).getDate();
+                if(!fullData[d]) fullData[d] = [];
+                fullData[d].push(item);
             });
 
-            // วาดปฏิทิน
             const firstDay = new Date(2026, month - 1, 1).getDay();
             const daysInMonth = new Date(2026, month, 0).getDate();
             const body = document.getElementById('calendarBody');
             body.innerHTML = '';
 
-            for (let i = 0; i < firstDay; i++) body.innerHTML += `<div class="day-cell" style="background:transparent; border:none;"></div>`;
+            for (let i = 0; i < firstDay; i++) body.innerHTML += `<div></div>`;
 
             for (let d = 1; d <= daysInMonth; d++) {
-                let badge = fullData[d] ? `<span class="badge-boss">⭐ ${fullData[d][0].rank_name}</span>` : '';
-                body.innerHTML += `
-                    <div class="day-cell" onclick="openModal(${d})">
-                        <span class="date-number">${d}</span>
-                        <div>${badge}</div>
-                    </div>`;
+                let html = `<span class="date-number">${d}</span>`;
+                if(fullData[d]) {
+                    // หาเฉพาะนายทหารเวรเพื่อเอาชื่อมาโชว์ตัวท็อป
+                    const boss = fullData[d].find(x => x.role.includes("นายทหารเวร")) || fullData[d][0];
+                    html += `<div class="badge-boss-name">⭐ ${boss.rank_name}</div>`;
+                    html += `<div class="badge-total-count">👥 ทั้งหมด ${fullData[d].length} นาย</div>`;
+                }
+                body.innerHTML += `<div class="day-cell" onclick="openModal(${d})">${html}</div>`;
             }
 
-            // วาดตาราง Print (ดึงข้อมูลเดิมกลับมา)
-            document.getElementById('printTableBody').innerHTML = dataSum.map(row => 
-                `<tr><td>${row.rank_name}</td><td>${row.role}</td><td>${row.days}</td></tr>`
+            // ข้อมูลสำหรับปริ้นท์ (แบบเดิม)
+            document.getElementById('printTableBody').innerHTML = dataSum.map(r => 
+                `<tr><td>${r.rank_name}</td><td>${r.role}</td><td>${r.days}</td></tr>`
             ).join('');
 
-        } catch (e) { console.error(e); }
+        } catch(e) { console.error(e); }
     }
 
     function openModal(day) {
-        const monthName = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
-        document.getElementById('modalDateTitle').innerText = `วันที่ ${day} ${monthName}`;
         const body = document.getElementById('modalBody');
-        
-        if (!fullData[day]) {
-            body.innerHTML = '<p style="text-align:center; color:gray;">ไม่มีข้อมูลการจัดเวร</p>';
+        document.getElementById('modalTitle').innerText = `รายชื่อวันที่ ${day}`;
+        if(!fullData[day]) {
+            body.innerHTML = "ไม่มีข้อมูล";
         } else {
-            body.innerHTML = fullData[day].map(d => `
-                <div class="duty-card">
-                    <div>
-                        <div style="font-weight:700;">${d.rank_name}</div>
-                        <div style="font-size:12px; color:gray;">${d.role}</div>
-                    </div>
-                    <button class="btn-del" onclick="deleteEntry(${d.id}, '${d.rank_name}', ${day})">ลบ</button>
+            body.innerHTML = fullData[day].map(item => `
+                <div class="duty-item">
+                    <div><b>${item.rank_name}</b><br><small>${item.role}</small></div>
+                    <button class="btn-del-mini" onclick="deleteEntry(${item.id}, ${day})">ลบ</button>
                 </div>
             `).join('');
         }
         document.getElementById('dutyModal').style.display = 'flex';
     }
 
-    async function deleteEntry(id, name, day) {
-        if (confirm(`ต้องการลบเวรของ ${name}?`)) {
-            const res = await fetch(`/delete-shift/${id}`, { method: 'DELETE' });
-            if (res.ok) { 
-                await renderReport(currentGroup); 
-                fullData[day] ? openModal(day) : closeModal();
-            }
+    async function deleteEntry(id, day) {
+        if(confirm("ยืนยันการลบ?")) {
+            await fetch(`/delete-shift/${id}`, { method: 'DELETE' });
+            await renderReport(currentGroup);
+            fullData[day] ? openModal(day) : closeModal();
         }
     }
 
     function closeModal() { document.getElementById('dutyModal').style.display = 'none'; }
-    window.onclick = (e) => { if(e.target == document.getElementById('dutyModal')) closeModal(); }
-
-    async function syncAllToGoogle() {
-        const btn = document.getElementById('syncBtn');
-        btn.innerHTML = "⏳ ซิงค์...";
-        // ใส่ API Sync ของเดิมที่นี่...
-        setTimeout(() => { btn.innerHTML = "🔄 ซิงค์ข้อมูล"; alert("สำเร็จ!"); }, 1000);
-    }
-
     renderReport('กองพัน');
 </script>
 </body>
