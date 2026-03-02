@@ -206,3 +206,32 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
+
+// API สำหรับนำเข้ารายชื่อ (รองรับหัวข้อภาษาไทยจาก Excel ของเพื่อน)
+app.post('/import-users', async (req, res) => {
+    const { users } = req.body; 
+    if (!users || !Array.isArray(users)) return res.status(400).send("ข้อมูลไม่ถูกต้อง");
+
+    try {
+        const connection = await getConnection();
+        // เราจะเก็บ "ยศ - ชื่อ" ลงใน rank_name และ "หน้าที่" ลงใน role
+        const sql = "INSERT INTO users (rank_name, role, email) VALUES (?, ?, ?)";
+        
+        for (const user of users) {
+            // ดึงค่าตามหัวข้อในไฟล์ CSV ของเพื่อนเป๊ะๆ
+            const rankAndName = user["ยศ - ชื่อ"] || "";
+            const role = user["หน้าที่"] || "";
+            const email = user["email"] || "";
+
+            if (rankAndName) { // บันทึกเฉพาะแถวที่มีชื่อ
+                await connection.execute(sql, [rankAndName, role, email]);
+            }
+        }
+        
+        await connection.end();
+        res.send(`✅ นำเข้าสำเร็จ ${users.length} รายชื่อลง Cloud เรียบร้อย!`);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Error: " + err.message);
+    }
+});
