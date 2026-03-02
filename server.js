@@ -292,11 +292,24 @@ app.delete('/clear-all-users', async (req, res) => {
     }
 });
 
+app.delete('/clear-all-users', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        await connection.execute("DELETE FROM shift_assignments"); // ลบเวรก่อน
+        await connection.execute("DELETE FROM users"); // แล้วค่อยลบชื่อ
+        await connection.end();
+        res.send('ok');
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
 // 6. Start Server (แก้ Port ให้รองรับ Render)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
+
 
 
 
