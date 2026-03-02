@@ -21,12 +21,11 @@
             overflow: hidden;
         }
 
-        /* 🖼️ พื้นหลัง (เปลี่ยน URL ภาพได้ที่นี่) */
+        /* 🖼️ พื้นหลัง */
         .bg-container {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            /* เปลี่ยนจาก URL เว็บ เป็นชื่อที่อยู่ไฟล์ในเครื่อง */
             background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
             url('images/laius.jpg'); 
             background-size: cover;
@@ -73,7 +72,7 @@
         .nav-item:hover {
             background: rgba(255,255,255,0.1);
             color: var(--accent-color);
-            padding-left: 35px; /* ลูกเล่นเลื่อนขวาตอน Hover */
+            padding-left: 35px;
         }
 
         /* 🔝 Header & Content Area */
@@ -82,6 +81,7 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow-y: auto; /* เพิ่มเพื่อให้เลื่อนดูการ์ดได้ถ้าจอน้อย */
         }
 
         .top-bar {
@@ -133,19 +133,11 @@
         .portal-card h2 { margin: 10px 0; font-size: 1.5em; font-weight: 700; }
         .portal-card p { color: #ccc; font-size: 0.95em; margin: 0; }
         
-        /* เพิ่ม โลโก้กองพันครับ */
         .header-content {
-        display: flex;
-        align-items: center;
-        gap: 20px; /* ระยะห่างระหว่างโลโก้กับตัวหนังสือ */
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
-
-        .logo-img {
-        width: 80px; /* ปรับขนาดความกว้างโลโก้ตามเหมาะสม */
-        height: auto;
-        filter: drop-shadow(2px 2px 10px rgba(0,0,0,0.5)); /* เพิ่มเงาให้โลโก้เด่นขึ้น */
-        }
-        
     </style>
 </head>
 <body>
@@ -169,27 +161,48 @@
     </nav>
 
     <div class="main-wrapper">
-    <header class="top-bar" style="padding: 20px 40px; margin-bottom: 0;">
-    <div style="display: flex; align-items: center; gap: 25px;">
-        
-        <img src="images/air.png" alt="โลโก้กองพัน" 
-             style="width: 140px; height: auto; filter: drop-shadow(3px 3px 10px rgba(0,0,0,0.6));">
-        
-        <div style="text-align: left;">
-            <h1 style="margin:0; font-size: 2.5em; font-weight: 700; text-shadow: 3px 3px 10px rgba(0,0,0,0.7); line-height: 1.1; color: #fff;">
-                ระบบบริหารจัดการตารางเวร
-            </h1>
-            <span style="font-weight: 400; font-size: 1.2em; color: var(--accent-color); letter-spacing: 1px; text-shadow: 1px 1px 5px rgba(0,0,0,0.5);">
-                กองพันทหารอากาศโยธินโรงเรียนการบิน
-            </span>
-        </div>
+        <header class="top-bar" style="padding: 20px 40px; margin-bottom: 0;">
+            <div style="display: flex; align-items: center; gap: 25px;">
+                <img src="images/air.png" alt="โลโก้กองพัน" 
+                     style="width: 140px; height: auto; filter: drop-shadow(3px 3px 10px rgba(0,0,0,0.6));">
+                
+                <div style="text-align: left;">
+                    <h1 style="margin:0; font-size: 2.5em; font-weight: 700; text-shadow: 3px 3px 10px rgba(0,0,0,0.7); line-height: 1.1; color: #fff;">
+                        ระบบบริหารจัดการตารางเวร
+                    </h1>
+                    <span style="font-weight: 400; font-size: 1.2em; color: var(--accent-color); letter-spacing: 1px; text-shadow: 1px 1px 5px rgba(0,0,0,0.5);">
+                        กองพันทหารอากาศโยธินโรงเรียนการบิน
+                    </span>
+                </div>
+            </div>
+        </header>
 
+        <div class="portal-grid">
+            <a href="index.html" class="portal-card">
+                <i class="fas fa-upload"></i>
+                <h2>นำเข้าข้อมูล</h2>
+                <p>อัปโหลด Excel รายชื่อทหาร</p>
+            </a>
+
+            <a href="manage.html" class="portal-card">
+                <i class="fas fa-calendar-alt"></i>
+                <h2>จัดการตารางเวร</h2>
+                <p>เลือกคนลงเวร และล้างข้อมูล</p>
+            </a>
+
+            <a href="report.html" class="portal-card">
+                <i class="fas fa-file-invoice"></i>
+                <h2>สรุปรายงาน</h2>
+                <p>ตรวจสอบสถิติการเข้าเวร</p>
+            </a>
+
+            <a href="dashboard.html" class="portal-card">
+                <i class="fas fa-desktop"></i>
+                <h2>หน้าจอแสดงผล</h2>
+                <p>เปิดหน้าปฏิทินให้กำลังพลดู</p>
+            </a>
+        </div>
     </div>
-</header>
-
-    <div class="portal-grid">
-        </div>
-</div>
 
 </body>
 </html>
