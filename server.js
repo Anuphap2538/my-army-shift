@@ -274,33 +274,20 @@ app.delete('/clear-shifts', async (req, res) => {
     }
 });
 
-// API สำหรับล้างรายชื่อทหารทั้งหมด (ปุ่มแดง)
+// แก้เป็น app.delete และเช็คชื่อ Path ให้ตรงกับที่หน้าบ้านเรียก
 app.delete('/clear-all-users', async (req, res) => {
     let connection;
     try {
         connection = await getConnection();
-        // 1. ต้องลบข้อมูลในตารางเวรก่อน (เพราะมันเชื่อมโยงกัน)
+        // ต้องลบตารางเวรก่อนเสมอไม่งั้นติด Error Foreign Key
         await connection.execute("DELETE FROM shift_assignments");
-        // 2. ลบรายชื่อทั้งหมด
         await connection.execute("DELETE FROM users"); 
         await connection.end();
         res.send('ok');
     } catch (err) {
         if (connection) await connection.end();
-        console.error(err);
+        console.error("Delete Error:", err);
         res.status(500).send("ลบไม่สำเร็จ: " + err.message);
-    }
-});
-
-app.delete('/clear-all-users', async (req, res) => {
-    try {
-        const connection = await getConnection();
-        await connection.execute("DELETE FROM shift_assignments"); // ลบเวรก่อน
-        await connection.execute("DELETE FROM users"); // แล้วค่อยลบชื่อ
-        await connection.end();
-        res.send('ok');
-    } catch (err) {
-        res.status(500).send(err.message);
     }
 });
 
@@ -309,6 +296,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
+
 
 
 
