@@ -6,59 +6,82 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
     <style>
-        :root { --primary: #2563eb; --bg: #f8fafc; }
-        body { font-family: 'Sarabun', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
-        .app-container { max-width: 1400px; margin: auto; display: grid; grid-template-columns: 350px 1fr; gap: 20px; }
-        .sidebar { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: fit-content; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; color: #475569; }
-        select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-family: inherit; font-size: 1rem; }
-        .btn-primary { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
-        .btn-primary:hover { background: #1e40af; }
-        .main-content { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        #calendar { min-height: 650px; }
-        #shiftSection { background: #eef2ff; padding: 15px; border-radius: 10px; border: 1px solid #2563eb; display: none; margin-bottom: 20px; }
-        .shift-label { pointer-events: none; }
-    </style>
-</head>
-<body>
+    /* ปรับ Layout ให้ซิ่งและสมดุล */
+    :root { --primary: #2563eb; --bg: #f8fafc; }
+    body { font-family: 'Sarabun', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+    
+    .app-container { 
+        max-width: 1600px; 
+        margin: auto; 
+        display: grid; 
+        grid-template-columns: 350px 1fr; /* ฝั่งซ้าย 350px ฝั่งขวาที่เหลือทั้งหมด */
+        gap: 25px; 
+    }
+
+    .sidebar { 
+        background: white; 
+        padding: 25px; 
+        border-radius: 15px; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+        height: fit-content; 
+    }
+
+    .main-content { 
+        background: white; 
+        padding: 25px; 
+        border-radius: 15px; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        min-height: 800px; /* ยืดพื้นที่ให้ปฏิทิน */
+    }
+
+    /* สไตล์ปุ่มให้ขนาดเท่ากัน */
+    .btn-action { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
+    
+    .btn-delete-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+    .btn-small { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 13px; color: white; }
+</style>
 
 <div class="app-container">
     <div class="sidebar">
-    <h2 style="color:var(--primary); margin-top:0;">📋 ลงข้อมูลเวร</h2>
-    
-    <div class="form-group">
-        <label>1. เลือกหน้าที่ (Role)</label>
-        <select id="roleFilter" onchange="updateSelection()"></select>
-    </div>
-    <div id="shiftSection" class="form-group">
-        <label style="color: #2563eb;">🕒 เลือกผลัดที่จะลง</label>
-        <select id="workShift">
-            <option value="1">ผลัด 1</option><option value="2">ผลัด 2</option><option value="3">ผลัด 3</option>
-        </select>
-    </div>
-    <div class="form-group">
-        <label>2. รายชื่อกำลังพล</label>
-        <select id="userSelect"></select>
-    </div>
-    <div class="form-group">
-        <label>3. สังกัด/กลุ่มงาน</label>
-        <select id="groupFilter">
-            <option value="กองพัน">กองพัน</option><option value="ศปก.">ศปก.</option>
-        </select>
+        <h2 style="color:var(--primary); margin-top:0;">📋 จัดการเวร</h2>
+        
+        <div class="form-group">
+            <label>1. เลือกหน้าที่ (Role)</label>
+            <select id="roleFilter" onchange="updateSelection()"></select>
+        </div>
+
+        <div id="shiftSection" class="form-group" style="display:none; background:#eff6ff; padding:10px; border-radius:10px;">
+            <label style="color: #2563eb;">🕒 เลือกผลัด (เวรวิทยุ)</label>
+            <select id="workShift">
+                <option value="1">ผลัด 1</option><option value="2">ผลัด 2</option><option value="3">ผลัด 3</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>2. รายชื่อกำลังพล</label>
+            <select id="userSelect"></select>
+        </div>
+
+        <div class="form-group">
+            <label>3. สังกัด/กลุ่มงาน</label>
+            <select id="groupFilter">
+                <option value="กองพัน">กองพัน</option>
+                <option value="ศปก.">ศปก.</option>
+            </select>
+        </div>
+
+        <button class="btn-action" style="background: var(--primary); color:white;" onclick="saveShift()">💾 บันทึกการจัดเวร</button>
+        
+        <button class="btn-action" style="background: #facc15; color: #1e293b;" onclick="location.href='/'">🏠 กลับหน้าหลัก</button>
+
+        <div class="btn-delete-group">
+            <button class="btn-small" style="background: #f97316;" onclick="clearAllShifts()">⚠️ ล้างเวร</button>
+            <button class="btn-small" style="background: #ef4444;" onclick="clearAllUsers()">🗑️ ล้างชื่อ</button>
+        </div>
     </div>
 
-    <button class="btn-primary" onclick="saveShift()">💾 บันทึกการจัดเวร</button>
-    
-    <button onclick="location.href='/'" style="width:100%; background: #facc15; color: #1e293b; padding: 15px; border:none; border-radius: 12px; cursor:pointer; font-weight:bold; margin-bottom: 10px;">🏠 กลับหน้าหลัก</button>
-
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
-        <button onclick="clearAllShifts()" style="background: #f97316; color: white; padding: 10px; border: none; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: bold;">
-            ⚠️ ล้างเวร
-        </button>
-        <button onclick="clearAllUsers()" style="background: #ef4444; color: white; padding: 10px; border: none; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: bold;">
-            🗑️ ล้างชื่อ
-        </button>
+    <div class="main-content">
+        <div id="calendar"></div>
     </div>
 </div>
 
@@ -227,6 +250,7 @@ async function clearAllShifts() {
 </body>
 
 </html>
+
 
 
 
