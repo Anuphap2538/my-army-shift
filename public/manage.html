@@ -25,63 +25,40 @@
 
 <div class="app-container">
     <div class="sidebar">
-        <h2 style="color:var(--primary); margin-top:0;">📋 ลงข้อมูลเวร</h2>
-        
-        <div class="form-group">
-            <label>1. เลือกหน้าที่ (Role)</label>
-            <select id="roleFilter" onchange="updateSelection()">
-                <option value="">-- กำลังโหลดข้อมูล --</option>
-            </select>
-        </div>
-
-        <div id="shiftSection" class="form-group">
-            <label style="color: #2563eb;">🕒 เลือกผลัดที่จะลง (เวรวิทยุ)</label>
-            <select id="workShift">
-                <option value="1">ผลัด 1</option>
-                <option value="2">ผลัด 2</option>
-                <option value="3">ผลัด 3</option>
-            </select>
-            <small style="color: #64748b;">*เปลี่ยนผลัดแล้วค่อยจิ้มวันที่ในปฏิทิน</small>
-        </div>
-
-        <div class="form-group">
-            <label>2. รายชื่อกำลังพล</label>
-            <select id="userSelect">
-                <option value="">-- เลือกหน้าที่ก่อน --</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>3. สังกัด/กลุ่มงาน</label>
-            <select id="groupFilter">
-                <option value="กองพัน">กองพัน</option>
-                <option value="ศปก.">ศปก.</option>
-            </select>
-        </div>
-
-        <button class="btn-primary" onclick="saveShift()">💾 บันทึกการจัดเวร</button>
-
-        <button onclick="location.href='/'" style="width:100%; background-color: #facc15; color: #1e293b; padding: 12px; border:none; border-radius: 10px; cursor:pointer; font-weight:bold; margin-bottom: 15px;">🏠 กลับหน้าหลัก</button>
-
-        </div>
-    </div>
-
-    <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee;">
-    <h3 style="font-size: 14px; color: #64748b; margin-bottom: 15px;">🛠️ จัดการฐานข้อมูล</h3>
+    <h2 style="color:var(--primary); margin-top:0;">📋 ลงข้อมูลเวร</h2>
     
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-        <button onclick="clearAllShifts()" style="background-color: #f97316; color: white; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px;">
-            ⚠️ ล้างข้อมูลเวรทั้งหมด (ปฏิทิน)
-        </button>
-
-        <button onclick="clearAllUsers()" style="background-color: #ef4444; color: white; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px;">
-            🗑️ ล้างรายชื่อทหารทั้งหมด (Excel)
-        </button>
+    <div class="form-group">
+        <label>1. เลือกหน้าที่ (Role)</label>
+        <select id="roleFilter" onchange="updateSelection()"></select>
     </div>
-</div>
+    <div id="shiftSection" class="form-group">
+        <label style="color: #2563eb;">🕒 เลือกผลัดที่จะลง</label>
+        <select id="workShift">
+            <option value="1">ผลัด 1</option><option value="2">ผลัด 2</option><option value="3">ผลัด 3</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>2. รายชื่อกำลังพล</label>
+        <select id="userSelect"></select>
+    </div>
+    <div class="form-group">
+        <label>3. สังกัด/กลุ่มงาน</label>
+        <select id="groupFilter">
+            <option value="กองพัน">กองพัน</option><option value="ศปก.">ศปก.</option>
+        </select>
+    </div>
 
-    <div class="main-content">
-        <div id="calendar"></div>
+    <button class="btn-primary" onclick="saveShift()">💾 บันทึกการจัดเวร</button>
+    
+    <button onclick="location.href='/'" style="width:100%; background: #facc15; color: #1e293b; padding: 15px; border:none; border-radius: 12px; cursor:pointer; font-weight:bold; margin-bottom: 10px;">🏠 กลับหน้าหลัก</button>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+        <button onclick="clearAllShifts()" style="background: #f97316; color: white; padding: 10px; border: none; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: bold;">
+            ⚠️ ล้างเวร
+        </button>
+        <button onclick="clearAllUsers()" style="background: #ef4444; color: white; padding: 10px; border: none; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: bold;">
+            🗑️ ล้างชื่อ
+        </button>
     </div>
 </div>
 
@@ -250,6 +227,7 @@ async function clearAllShifts() {
 </body>
 
 </html>
+
 
 
 
