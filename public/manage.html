@@ -5,55 +5,40 @@
     <title>ระบบจัดการเวร | จัดการเข้าเวร</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
+   
     <style>
-    /* ปรับ Layout ให้ซิ่งและสมดุล */
-    :root { --primary: #2563eb; --bg: #f8fafc; }
-    body { font-family: 'Sarabun', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+    .sidebar { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: fit-content; }
+    .form-group { margin-top: 15px; margin-bottom: 20px; } /* ขยับลงมาใต้หัวข้อ */
     
-    .app-container { 
-        max-width: 1600px; 
-        margin: auto; 
-        display: grid; 
-        grid-template-columns: 350px 1fr; /* ฝั่งซ้าย 350px ฝั่งขวาที่เหลือทั้งหมด */
-        gap: 25px; 
+    /* ปรับปุ่มทุกปุ่มให้ขนาดเท่ากัน (Full Width) */
+    .btn-main { 
+        width: 100%; 
+        padding: 15px; 
+        border: none; 
+        border-radius: 12px; 
+        font-weight: 600; 
+        cursor: pointer; 
+        margin-bottom: 12px; 
+        transition: 0.3s;
+        font-size: 15px;
     }
-
-    .sidebar { 
-        background: white; 
-        padding: 25px; 
-        border-radius: 15px; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
-        height: fit-content; 
-    }
-
-    .main-content { 
-        background: white; 
-        padding: 25px; 
-        border-radius: 15px; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        min-height: 800px; /* ยืดพื้นที่ให้ปฏิทิน */
-    }
-
-    /* สไตล์ปุ่มให้ขนาดเท่ากัน */
-    .btn-action { width: 100%; padding: 15px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
-    
-    .btn-delete-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-    .btn-small { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 13px; color: white; }
 </style>
 
 <div class="app-container">
     <div class="sidebar">
-        <h2 style="color:var(--primary); margin-top:0;">📋 จัดการเวร</h2>
+        <h2 style="color:var(--primary); margin: 0 0 20px 0;">📋 ลงข้อมูลเวร</h2>
         
         <div class="form-group">
             <label>1. เลือกหน้าที่ (Role)</label>
             <select id="roleFilter" onchange="updateSelection()"></select>
         </div>
 
-        <div id="shiftSection" class="form-group" style="display:none; background:#eff6ff; padding:10px; border-radius:10px;">
+        <div id="shiftSection" class="form-group" style="display:none; background:#eff6ff; padding:15px; border-radius:10px; border:1px solid #dbeafe;">
             <label style="color: #2563eb;">🕒 เลือกผลัด (เวรวิทยุ)</label>
             <select id="workShift">
-                <option value="1">ผลัด 1</option><option value="2">ผลัด 2</option><option value="3">ผลัด 3</option>
+                <option value="1">ผลัด 1</option>
+                <option value="2">ผลัด 2</option>
+                <option value="3">ผลัด 3</option>
             </select>
         </div>
 
@@ -70,13 +55,13 @@
             </select>
         </div>
 
-        <button class="btn-action" style="background: var(--primary); color:white;" onclick="saveShift()">💾 บันทึกการจัดเวร</button>
+        <button class="btn-main" style="background: var(--primary); color: white;" onclick="saveShift()">💾 บันทึกการจัดเวร</button>
         
-        <button class="btn-action" style="background: #facc15; color: #1e293b;" onclick="location.href='/'">🏠 กลับหน้าหลัก</button>
+        <button class="btn-main" style="background: #facc15; color: #1e293b;" onclick="location.href='/'">🏠 กลับหน้าหลัก</button>
 
-        <div class="btn-delete-group">
-            <button class="btn-small" style="background: #f97316;" onclick="clearAllShifts()">⚠️ ล้างเวร</button>
-            <button class="btn-small" style="background: #ef4444;" onclick="clearAllUsers()">🗑️ ล้างชื่อ</button>
+        <div style="margin-top: 20px; border-top: 2px solid #f1f5f9; padding-top: 20px;">
+            <button class="btn-main" style="background: #f97316; color: white;" onclick="clearAllShifts()">⚠️ ล้างข้อมูลเวร (ปฏิทิน)</button>
+            <button class="btn-main" style="background: #ef4444; color: white;" onclick="clearAllUsers()">🗑️ ล้างรายชื่อทหาร (Excel)</button>
         </div>
     </div>
 
@@ -250,6 +235,7 @@ async function clearAllShifts() {
 </body>
 
 </html>
+
 
 
 
