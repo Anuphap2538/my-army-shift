@@ -19,13 +19,11 @@
             margin: 0;
             padding: 20px;
             min-height: 100vh;
-            /* เพิ่มพื้นหลังแบบจางๆ เบลอๆ */
             background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
             background-attachment: fixed;
             position: relative;
         }
 
-        /* ตกแต่งพื้นหลังให้ดูมีมิติ */
         body::before {
             content: "";
             position: fixed;
@@ -37,7 +35,6 @@
             z-index: -1;
         }
 
-        /* 1. Header & Logo Section (วงสีฟ้า) */
         .top-navigation {
             max-width: 1200px;
             margin: 0 auto 25px auto;
@@ -59,7 +56,7 @@
         }
 
         .logo-img {
-            width: 55px; /* ขนาดพอดีกับหัวข้อ */
+            width: 55px;
             height: auto;
             filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
         }
@@ -67,7 +64,6 @@
         .brand-text h1 { margin: 0; font-size: 24px; color: var(--primary); font-weight: 700; }
         .brand-text p { margin: 0; font-size: 13px; color: #64748b; }
 
-        /* 3. Toolbar & Sync Button */
         .controls-wrapper {
             display: flex;
             align-items: center;
@@ -122,8 +118,15 @@
             padding: 12px;
             border: 1px solid #f1f5f9;
             transition: 0.3s;
+            cursor: pointer;
         }
-        .day-cell:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .day-cell:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-color: var(--primary); }
+
+        .date-number { font-size: 18px; font-weight: 700; color: #cbd5e1; }
+        .badge-container { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+        .badge { font-size: 10px; padding: 3px 7px; border-radius: 6px; font-weight: 600; display: block; }
+        .badge-boss { background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; }
+        .badge-count { background: #f8fafc; color: #64748b; }
 
         @media print {
             .no-print, body::before { display: none !important; }
@@ -173,25 +176,95 @@
 </table>
 
 <script>
-    // JS Logic ของเพื่อนเหมือนเดิมเป๊ะ ไม่ให้กระทบการทำงาน
     let currentGroup = 'กองพัน';
     let fullData = {};
 
     async function syncAllToGoogle() {
         const btn = document.getElementById('syncBtn');
+        const month = document.getElementById('monthSelect').value;
+        const year = "2026";
+        
+        if(!confirm(`ยืนยันการซิงค์ข้อมูลเวร (${currentGroup}) เข้า Google Calendar?`)) return;
+        
         btn.innerHTML = "⏳ กำลังซิงค์...";
-        // Logic เดิมของเพื่อน...
-        setTimeout(() => { 
-            alert("ซิงค์สำเร็จ!"); 
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`/sync-existing-shifts?month=${month}&year=${year}&group=${currentGroup}`, { method: 'POST' });
+            const result = await res.text();
+            alert(result);
+        } catch (err) {
+            alert("เกิดข้อผิดพลาด: " + err.message);
+        } finally {
             btn.innerHTML = "🔄 ซิงค์ข้อมูลเข้า Calendar";
-        }, 1500);
+            btn.disabled = false;
+        }
     }
 
     async function renderReport(group) {
         currentGroup = group;
-        // Logic เดิมของเพื่อน...
+        const month = document.getElementById('monthSelect').value;
+        const monthName = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
+        
+        document.getElementById('subtext').innerText = `กลุ่มงาน: ${group} | ประจำเดือน: ${monthName} 2569`;
+
+        try {
+            const [resCal, resSum] = await Promise.all([
+                fetch(`/get-report-calendar?month=${month}&year=2026&group=${group}`),
+                fetch(`/get-excel-summary?month=${month}&year=2026&group=${group}`)
+            ]);
+
+            const dataCal = await resCal.json();
+            const dataSum = await resSum.json();
+
+            // จัดกลุ่มข้อมูล
+            fullData = {};
+            dataCal.forEach(item => {
+                const day = new Date(item.shift_date).getDate();
+                if (!fullData[day]) fullData[day] = [];
+                fullData[day].push(item);
+            });
+
+            // วาดปฏิทิน
+            const firstDay = new Date(2026, month - 1, 1).getDay();
+            const daysInMonth = new Date(2026, month, 0).getDate();
+            const body = document.getElementById('calendarBody');
+            body.innerHTML = '';
+
+            // ช่องว่าง
+            for (let i = 0; i < firstDay; i++) {
+                body.innerHTML += `<div class="day-cell" style="background:transparent; border:none;"></div>`;
+            }
+
+            // วันที่มีข้อมูล
+            for (let d = 1; d <= daysInMonth; d++) {
+                let badges = '';
+                if (fullData[d]) {
+                    const boss = fullData[d].find(x => x.role.includes("นายทหารเวร"));
+                    if (boss) badges += `<div class="badge badge-boss">⭐ ${boss.rank_name}</div>`;
+                    badges += `<div class="badge badge-count">👥 เข้าเวร ${fullData[d].length} นาย</div>`;
+                }
+
+                body.innerHTML += `
+                    <div class="day-cell">
+                        <span class="date-number">${d}</span>
+                        <div class="badge-container">${badges}</div>
+                    </div>
+                `;
+            }
+
+            // ตาราง Print
+            const printBody = document.getElementById('printTableBody');
+            printBody.innerHTML = dataSum.map(row => `
+                <tr><td>${row.rank_name}</td><td>${row.role}</td><td>${row.days}</td></tr>
+            `).join('');
+
+        } catch (e) {
+            console.error("Error loading calendar:", e);
+        }
     }
     
+    // เริ่มทำงาน
     renderReport('กองพัน');
 </script>
 
