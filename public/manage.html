@@ -189,15 +189,22 @@
     }
 
     async function clearAllShifts() {
-        if (confirm("⚠️ ยืนยันการลบข้อมูลเวรทั้งหมด?")) {
-            try {
-                const res = await fetch('/clear-shifts');
-                const msg = await res.text();
-                alert(msg);
-                location.reload();
-            } catch (err) { alert("ลบข้อมูลไม่สำเร็จ"); }
+    if (!confirm("⚠️ ยืนยันการลบข้อมูลเวรทั้งหมด? (รายชื่อคนจะยังอยู่ แต่ตารางเวรจะว่างเปล่า)")) return;
+    
+    try {
+        // เปลี่ยนจาก fetch เฉยๆ เป็นระบุ method: 'DELETE'
+        const res = await fetch('/clear-shifts', { method: 'DELETE' });
+        const msg = await res.text();
+        if (res.ok) {
+            alert(msg);
+            location.reload();
+        } else {
+            alert("❌ " + msg);
         }
+    } catch (err) { 
+        alert("❌ ไม่สามารถเชื่อมต่อกับ Server ได้"); 
     }
+}
 
     async function clearAllUsers() {
     if (!confirm("⚠️ คุณแน่ใจใช่ไหมที่จะลบรายชื่อทหารทั้งหมด? (ข้อมูลจะหายถาวร)")) return;
@@ -220,3 +227,4 @@
 </body>
 
 </html>
+
