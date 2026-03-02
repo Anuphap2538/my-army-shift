@@ -63,6 +63,10 @@
 
         <button onclick="location.href='/'" style="width:100%; background-color: #facc15; color: #1e293b; padding: 12px; border:none; border-radius: 10px; cursor:pointer; font-weight:bold; margin-bottom: 15px;">🏠 กลับหน้าหลัก</button>
 
+        <button onclick="clearAllUsers()" style="background-color: #ff4d4d; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-left: 10px;">
+    🗑️ ล้างรายชื่อทั้งหมด
+</button>   
+        
         <div style="display: flex; justify-content: center; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
             <button onclick="clearAllShifts()" style="background-color: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
                 🗑️ ล้างข้อมูลเวรทั้งหมด
@@ -194,6 +198,25 @@
             } catch (err) { alert("ลบข้อมูลไม่สำเร็จ"); }
         }
     }
+
+    async function clearAllUsers() {
+    if (!confirm("⚠️ คุณแน่ใจใช่ไหมที่จะลบรายชื่อทหารทั้งหมด? (ข้อมูลจะหายถาวร)")) return;
+
+    try {
+        const response = await fetch('/clear-all-users', { method: 'DELETE' });
+        if (response.ok) {
+            alert("✅ ล้างข้อมูลเรียบร้อยแล้ว!");
+            location.reload(); // รีเฟรชหน้าจอเพื่ออัปเดตรายชื่อ
+        } else {
+            const errorText = await response.text();
+            alert("❌ เกิดข้อผิดพลาด: " + errorText);
+        }
+    } catch (err) {
+        console.error(err);
+        alert("❌ ไม่สามารถเชื่อมต่อกับ Server ได้");
+    }
+}
 </script>
 </body>
+
 </html>
