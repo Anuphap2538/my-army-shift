@@ -244,11 +244,42 @@ app.delete('/clear-all-users', async (req, res) => {
     }
 });
 
+// 1. API สำหรับล้างรายชื่อทหารทั้งหมด (จากปุ่ม clearAllUsers)
+app.delete('/clear-all-users', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        // ลบข้อมูลเวรที่ผูกกับคนออกก่อน เพื่อป้องกัน Error ติด Foreign Key
+        await connection.execute("DELETE FROM shift_assignments");
+        // ลบรายชื่อทั้งหมด
+        await connection.execute("DELETE FROM users"); 
+        await connection.end();
+        res.send('ok');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("ลบรายชื่อไม่สำเร็จ: " + err.message);
+    }
+});
+
+// 2. API สำหรับล้างข้อมูลการจัดเวรทั้งหมด (จากปุ่ม clearAllShifts)
+// หมายเหตุ: เปลี่ยนจาก app.get เป็น app.delete เพื่อความปลอดภัยตามมาตรฐาน
+app.delete('/clear-shifts', async (req, res) => {
+    try {
+        const connection = await getConnection();
+        await connection.execute("DELETE FROM shift_assignments");
+        await connection.end();
+        res.send('✅ ล้างข้อมูลการจัดเวรทั้งหมดเรียบร้อยแล้ว!');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("ลบข้อมูลเวรไม่สำเร็จ: " + err.message);
+    }
+});
+
 // 6. Start Server (แก้ Port ให้รองรับ Render)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
+
 
 
 
