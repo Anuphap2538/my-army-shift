@@ -6,36 +6,80 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
    
-    <style>
-    /* ใช้ Style เดิมของเพื่อน แต่คุมขนาดปุ่มให้เท่ากัน */
-    .btn-custom { 
+   <style>
+    :root { --primary: #2563eb; --bg: #f8fafc; }
+    body { font-family: 'Sarabun', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+    
+    /* แบ่งฝั่งซ้าย (350px) และ ฝั่งขวา (ที่เหลือ) */
+    .app-container { 
+        max-width: 1400px; 
+        margin: auto; 
+        display: grid; 
+        grid-template-columns: 350px 1fr; 
+        gap: 20px; 
+    }
+    
+    .sidebar { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: fit-content; }
+    .main-content { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+
+    /* คุมขนาดปุ่มทุกปุ่มใน Sidebar ให้เท่ากันเป๊ะ */
+    .btn-side { 
         width: 100%; 
-        padding: 12px; /* ขนาดเท่าปุ่มกลับหน้าหลักเดิมของเพื่อน */
+        padding: 12px; 
         border: none; 
         border-radius: 10px; 
+        font-weight: 600; 
         cursor: pointer; 
-        font-weight: bold; 
         margin-bottom: 10px; 
         font-family: inherit;
+        transition: 0.3s;
     }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: 600; color: #475569; }
+    select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-family: inherit; }
 </style>
 
-<div class="sidebar">
-    <h2 style="color:var(--primary); margin-top:0;">📋 ลงข้อมูลเวร</h2>
-    
-    <div class="form-group">
-        <label>1. เลือกหน้าที่ (Role)</label>
-        <select id="roleFilter" onchange="updateSelection()"></select>
+<div class="app-container">
+    <div class="sidebar">
+        <h2 style="color:var(--primary); margin-top:0;">📋 ลงข้อมูลเวร</h2>
+        
+        <div class="form-group">
+            <label>1. เลือกหน้าที่ (Role)</label>
+            <select id="roleFilter" onchange="updateSelection()"></select>
+        </div>
+
+        <div id="shiftSection" class="form-group" style="display:none; background:#eef2ff; padding:15px; border-radius:10px; border:1px solid #2563eb;">
+            <label style="color: #2563eb;">🕒 เลือกผลัดที่จะลง</label>
+            <select id="workShift">
+                <option value="1">ผลัด 1</option><option value="2">ผลัด 2</option><option value="3">ผลัด 3</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>2. รายชื่อกำลังพล</label>
+            <select id="userSelect"></select>
+        </div>
+
+        <div class="form-group">
+            <label>3. สังกัด/กลุ่มงาน</label>
+            <select id="groupFilter">
+                <option value="กองพัน">กองพัน</option><option value="ศปก.">ศปก.</option>
+            </select>
+        </div>
+
+        <button class="btn-side" style="background: var(--primary); color: white;" onclick="saveShift()">💾 บันทึกการจัดเวร</button>
+        <button class="btn-side" style="background: #facc15; color: #1e293b;" onclick="location.href='/'">🏠 กลับหน้าหลัก</button>
+        
+        <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+            <button class="btn-side" style="background: #f97316; color: white;" onclick="clearAllShifts()">⚠️ ล้างข้อมูลเวร (ปฏิทิน)</button>
+            <button class="btn-side" style="background: #ef4444; color: white;" onclick="clearAllUsers()">🗑️ ล้างรายชื่อทหาร (Excel)</button>
+        </div>
     </div>
-    <button class="btn-primary" onclick="saveShift()" style="width:100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; margin-bottom: 10px;">💾 บันทึกการจัดเวร</button>
-    
-    <button class="btn-custom" style="background: #facc15; color: #1e293b;" onclick="location.href='/'">🏠 กลับหน้าหลัก</button>
 
-    <button class="btn-custom" style="background: #f97316; color: white;" onclick="clearAllShifts()">⚠️ ล้างข้อมูลเวร (ปฏิทิน)</button>
-    
-    <button class="btn-custom" style="background: #ef4444; color: white;" onclick="clearAllUsers()">🗑️ ล้างรายชื่อทหาร (Excel)</button>
+    <div class="main-content">
+        <div id="calendar"></div>
+    </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 <script>
     let allUsers = [];
@@ -206,6 +250,7 @@ async function clearAllShifts() {
 </body>
 
 </html>
+
 
 
 
