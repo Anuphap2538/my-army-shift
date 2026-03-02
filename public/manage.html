@@ -7,67 +7,33 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
    
     <style>
-    .sidebar { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: fit-content; }
-    .form-group { margin-top: 15px; margin-bottom: 20px; } /* ขยับลงมาใต้หัวข้อ */
-    
-    /* ปรับปุ่มทุกปุ่มให้ขนาดเท่ากัน (Full Width) */
-    .btn-main { 
+    /* ใช้ Style เดิมของเพื่อน แต่คุมขนาดปุ่มให้เท่ากัน */
+    .btn-custom { 
         width: 100%; 
-        padding: 15px; 
+        padding: 12px; /* ขนาดเท่าปุ่มกลับหน้าหลักเดิมของเพื่อน */
         border: none; 
-        border-radius: 12px; 
-        font-weight: 600; 
+        border-radius: 10px; 
         cursor: pointer; 
-        margin-bottom: 12px; 
-        transition: 0.3s;
-        font-size: 15px;
+        font-weight: bold; 
+        margin-bottom: 10px; 
+        font-family: inherit;
     }
 </style>
 
-<div class="app-container">
-    <div class="sidebar">
-        <h2 style="color:var(--primary); margin: 0 0 20px 0;">📋 ลงข้อมูลเวร</h2>
-        
-        <div class="form-group">
-            <label>1. เลือกหน้าที่ (Role)</label>
-            <select id="roleFilter" onchange="updateSelection()"></select>
-        </div>
-
-        <div id="shiftSection" class="form-group" style="display:none; background:#eff6ff; padding:15px; border-radius:10px; border:1px solid #dbeafe;">
-            <label style="color: #2563eb;">🕒 เลือกผลัด (เวรวิทยุ)</label>
-            <select id="workShift">
-                <option value="1">ผลัด 1</option>
-                <option value="2">ผลัด 2</option>
-                <option value="3">ผลัด 3</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>2. รายชื่อกำลังพล</label>
-            <select id="userSelect"></select>
-        </div>
-
-        <div class="form-group">
-            <label>3. สังกัด/กลุ่มงาน</label>
-            <select id="groupFilter">
-                <option value="กองพัน">กองพัน</option>
-                <option value="ศปก.">ศปก.</option>
-            </select>
-        </div>
-
-        <button class="btn-main" style="background: var(--primary); color: white;" onclick="saveShift()">💾 บันทึกการจัดเวร</button>
-        
-        <button class="btn-main" style="background: #facc15; color: #1e293b;" onclick="location.href='/'">🏠 กลับหน้าหลัก</button>
-
-        <div style="margin-top: 20px; border-top: 2px solid #f1f5f9; padding-top: 20px;">
-            <button class="btn-main" style="background: #f97316; color: white;" onclick="clearAllShifts()">⚠️ ล้างข้อมูลเวร (ปฏิทิน)</button>
-            <button class="btn-main" style="background: #ef4444; color: white;" onclick="clearAllUsers()">🗑️ ล้างรายชื่อทหาร (Excel)</button>
-        </div>
+<div class="sidebar">
+    <h2 style="color:var(--primary); margin-top:0;">📋 ลงข้อมูลเวร</h2>
+    
+    <div class="form-group">
+        <label>1. เลือกหน้าที่ (Role)</label>
+        <select id="roleFilter" onchange="updateSelection()"></select>
     </div>
+    <button class="btn-primary" onclick="saveShift()" style="width:100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; margin-bottom: 10px;">💾 บันทึกการจัดเวร</button>
+    
+    <button class="btn-custom" style="background: #facc15; color: #1e293b;" onclick="location.href='/'">🏠 กลับหน้าหลัก</button>
 
-    <div class="main-content">
-        <div id="calendar"></div>
-    </div>
+    <button class="btn-custom" style="background: #f97316; color: white;" onclick="clearAllShifts()">⚠️ ล้างข้อมูลเวร (ปฏิทิน)</button>
+    
+    <button class="btn-custom" style="background: #ef4444; color: white;" onclick="clearAllUsers()">🗑️ ล้างรายชื่อทหาร (Excel)</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
@@ -199,20 +165,25 @@
 
     // ฟังก์ชันล้างรายชื่อ (ปุ่มแดง)
 async function clearAllUsers() {
-    if (!confirm("🚨 คำเตือนสูงสุด!\nการลบรายชื่อจะทำให้ข้อมูลเวรทั้งหมดถูกลบไปด้วย\nยืนยันการลบรายชื่อทหารทั้งหมดจากระบบ?")) return;
-
+    if (!confirm("🚨 ยืนยันลบรายชื่อทหารทั้งหมด?")) return;
     try {
-        const response = await fetch('/clear-all-users', { method: 'DELETE' });
-        if (response.ok) {
-            alert("✅ ล้างรายชื่อและข้อมูลเวรเรียบร้อยแล้ว!");
-            location.reload(); 
-        } else {
-            const errorText = await response.text();
-            alert("❌ เกิดข้อผิดพลาด: " + errorText);
+        const res = await fetch('/clear-all-users'); // เรียกปกติแบบ GET
+        if (res.ok) {
+            alert("✅ ล้างข้อมูลเรียบร้อย!");
+            location.reload();
         }
-    } catch (err) {
-        alert("❌ ไม่สามารถเชื่อมต่อกับ Server ได้");
-    }
+    } catch (err) { alert("❌ ลบไม่สำเร็จ"); }
+}
+
+async function clearAllShifts() {
+    if (!confirm("⚠️ ยืนยันล้างปฏิทิน?")) return;
+    try {
+        const res = await fetch('/clear-shifts'); // เรียกปกติแบบ GET
+        if (res.ok) {
+            alert("✅ ล้างปฏิทินเรียบร้อย!");
+            location.reload();
+        }
+    } catch (err) { alert("❌ ลบไม่สำเร็จ"); }
 }
 
 // ฟังก์ชันล้างเวร (ปุ่มส้ม) - ตัวที่เพื่อนบอกว่าใช้ได้แล้วแต่เช็ค Method อีกทีให้ชัวร์
@@ -235,6 +206,7 @@ async function clearAllShifts() {
 </body>
 
 </html>
+
 
 
 
