@@ -88,11 +88,6 @@ async function addDutyToCalendar(summary, date, tokenJson) {
     }
 }
 
-// เข้าหน้าแรกไปที่หน้า admin
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html')); 
-});
-
 // --- 4. Google Auth Routes ---
 app.get('/google/auth', (req, res) => {
     const userId = req.query.user_id;
@@ -308,6 +303,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
+
 
 
 
