@@ -154,7 +154,9 @@ app.get('/google/auth', (req, res) => {
 const { email, name } = googleUser; // ข้อมูลที่ได้จาก Google
 
 // ค้นหา ID จากฐานข้อมูลโดยใช้ Email
-const [rows] = await db.execute('SELECT id, rank_name FROM users WHERE email = ?', [email]);
+const connection = await getConnection();
+const [rows] = await connection.execute('SELECT id, rank_name FROM users WHERE email = ?', [email]);
+await connection.end();
 
 if (rows.length > 0) {
     req.session.userId = rows[0].id;
