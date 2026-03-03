@@ -2,6 +2,9 @@
   "name": "my-army-shift",
   "version": "1.0.0",
   "description": "Army Shift Management System",
+  "engines": {
+    "node": "20.x"
+  },
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -16,5 +19,7 @@
     "multer": "^2.0.2",
     "mysql2": "^3.18.2",
     "xlsx": "^0.18.5"
+    
   }
+  
 }

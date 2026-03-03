@@ -3,6 +3,7 @@ import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
@@ -153,15 +154,13 @@ app.get('/google/auth', (req, res) => {
 const { email, name } = googleUser; // ข้อมูลที่ได้จาก Google
 
 // ค้นหา ID จากฐานข้อมูลโดยใช้ Email
-// หุ้มด้วย async function เพื่อให้ใช้ await ได้
-(async () => {
-    try {
-        const connection = await getConnection();
-        console.log("Database connected successfully!");
-    } catch (err) {
-        console.error("Database connection failed:", err);
-    }
-})();
+getConnection().then(connection => {
+    console.log("Database connected!");
+    // โค้ดที่เหลือที่ต้องใช้ connection ให้ย้ายมาอยู่ในปีกกานี้ (ถ้ามี)
+}).catch(err => {
+    console.error("Connection error:", err);
+});
+
 const [rows] = await connection.execute('SELECT id, rank_name FROM users WHERE email = ?', [email]);
 await connection.end();
 
