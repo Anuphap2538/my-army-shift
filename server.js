@@ -3,6 +3,8 @@ import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import session from 'express-session';
+import { google } from 'googleapis';
 
 const app = express();
 app.use(express.json());
@@ -138,6 +140,7 @@ async function createSmartCalendarEvent(auth, shiftData, allShiftsOfDay) {
 }
 
 // --- 4. Google Auth Routes ---
+// --- 4. Google Auth Routes ---
 app.get('/google/auth', (req, res) => {
     const userId = req.query.user_id;
     if (!userId) return res.status(400).send("ไม่พบ User ID");
@@ -150,31 +153,45 @@ app.get('/google/auth', (req, res) => {
     res.redirect(url);
 });
 
-// ตัวอย่างภายใน callback หลังจากแลก Token สำเร็จ
-const { email, name } = googleUser; // ข้อมูลที่ได้จาก Google
+// ⚠️ จุดที่ต้องระวัง: Callback Route ของ Google
+app.get('/google/callback', async (req, res) => {
+    const code = req.query.code;
+    try {
+        const { tokens } = await oauth2Client.getToken(code);
+        oauth2Client.setCredentials(tokens);
 
-// ค้นหา ID จากฐานข้อมูลโดยใช้ Email
-getConnection().then(connection => {
-    console.log("Database connected!");
-    // โค้ดที่เหลือที่ต้องใช้ connection ให้ย้ายมาอยู่ในปีกกานี้ (ถ้ามี)
-}).catch(err => {
-    console.error("Connection error:", err);
+        // ดึง Email จาก Google (สมมติว่าเพื่อนมี Logic นี้อยู่แล้ว)
+        const ticket = await oauth2Client.verifyIdToken({
+            idToken: tokens.id_token,
+            audience: '1055278075819-3degsqjsed1f3o8k35doqot6f45ih9re.apps.googleusercontent.com'
+        });
+        const payload = ticket.getPayload();
+        const email = payload.email;
+
+        const connection = await getConnection();
+        const [rows] = await connection.execute('SELECT id, rank_name FROM users WHERE email = ?', [email]);
+        
+        if (rows.length > 0) {
+            req.session.userId = rows[0].id;
+            req.session.userName = rows[0].rank_name;
+            req.session.userEmail = email;
+            // บันทึก Token ลง DB (ถ้าต้องการ)
+            await connection.execute('UPDATE users SET google_token = ? WHERE email = ?', [JSON.stringify(tokens), email]);
+            await connection.end();
+            res.redirect('/dashboard.html'); 
+        } else {
+            await connection.end();
+            res.send("ไม่พบอีเมลนี้ในระบบฐานข้อมูลเวร กรุณาติดต่อแอดมิน");
+        }
+    } catch (err) {
+        console.error("❌ Google Callback Error:", err);
+        res.status(500).send("Login Failed");
+    }
 });
-
-const [rows] = await connection.execute('SELECT id, rank_name FROM users WHERE email = ?', [email]);
-await connection.end();
-
-if (rows.length > 0) {
-    req.session.userId = rows[0].id;
-    req.session.userName = rows[0].rank_name;
-    req.session.userEmail = email;
-    res.redirect('/dashboard.html'); // ล็อกอินเสร็จส่งไปหน้า Dashboard เลย
-} else {
-    res.send("ไม่พบอีเมลนี้ในระบบฐานข้อมูลเวร กรุณาติดต่อแอดมิน");
-}
 
 // --- 5. API ต่างๆ (ใช้ getConnection ที่สร้างใหม่) ---
 app.post('/sync-existing-shifts', async (req, res) => {
+// ... โค้ดที่เหลือของเพื่อนด้านล่างยาวไปถึง 400 บรรทัด ...
     const { month, year, group } = req.query;
     try {
         const connection = await getConnection();
@@ -459,17 +476,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
