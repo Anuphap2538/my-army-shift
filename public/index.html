@@ -6,7 +6,9 @@
     <title>Admin Control Panel | กองพันทหารอากาศโยธิน</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#4f46e5">
     <style>
         :root {
             --sidebar-color: rgba(15, 23, 42, 0.9); /* สีน้ำเงินเข้ม Slate */
@@ -139,6 +141,48 @@
             gap: 20px;
         }
     </style>
+
+    <style>
+    /* ... (อ้างอิง Root สีเดิม) ... */
+
+    .top-navigation {
+        display: flex; flex-direction: column; gap: 16px; /* เรียงแนวตั้งบนมือถือ */
+        padding: 20px; border-radius: 20px; background: white;
+    }
+
+    .brand-area { display: flex; align-items: center; gap: 12px; }
+
+    /* ปรับปุ่มให้กดง่ายด้วยนิ้วโป้ง */
+    .controls-wrapper { 
+        display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; 
+    }
+
+    #monthSelect { 
+        grid-column: span 2; padding: 14px; font-size: 16px; border-radius: 12px; 
+    }
+
+    .btn-nav { 
+        padding: 12px 8px; font-size: 14px; border-radius: 12px; 
+        display: flex; align-items: center; justify-content: center; font-weight: 600;
+    }
+
+    .btn-sync-google { 
+        grid-column: span 2; padding: 16px; font-size: 15px; margin-top: 8px;
+    }
+
+    /* ปรับตารางปฏิทินแอดมินให้เล็กแต่ชัด */
+    .day-cell { 
+        min-height: 80px; font-size: 10px; border-radius: 12px; padding: 4px;
+    }
+    .badge-boss { font-size: 9px; padding: 2px 4px; border-radius: 6px; }
+    
+    /* ซ่อนส่วนที่ไม่จำเป็นบนมือถือเพื่อประหยัดพื้นที่ */
+    @media (max-width: 480px) {
+        .badge-count { font-size: 8px; }
+        .weekday { font-size: 10px; }
+    }
+</style>
+
 </head>
 <body>
 

@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ลงทะเบียนรับตารางเวร | กองพันทหารอากาศโยธิน</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#4f46e5">
     <style>
         body { font-family: 'Sarabun', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
         .reg-card { background: white; color: #1e293b; padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; }
@@ -67,16 +70,6 @@
 
     fetchUsers();
 
-    // ในหน้า register.html ตรงฟังก์ชันที่กดปุ่มเชื่อมต่อ
-function connectGoogle() {
-    const userId = document.getElementById('userSelect').value; // ดึง ID คนที่เลือก
-    if (!userId) {
-        alert("กรุณาเลือกชื่อก่อนครับ!");
-        return;
-    }
-    // ส่ง userId ไปที่ server ผ่าน query string
-    window.location.href = `/google/auth?user_id=${userId}`;
-}
 </script>
 
 </body>

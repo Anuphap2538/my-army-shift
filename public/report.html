@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Duty Dashboard | ระบบสรุปเวรกองพัน</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#4f46e5">
     <style>
         :root {
             --primary: #4f46e5;
@@ -105,6 +108,50 @@
             #printTable { display: table !important; width: 100%; border-collapse: collapse; border: 1px solid black; }
             #printTable th, #printTable td { border: 1px solid black; padding: 8px; text-align: left; color: black; }
         }
+
+        /* Navigation Header สำหรับโทรศัพท์มือถือ */
+.top-navigation {
+    flex-direction: column; /* มือถือเรียงแนวตั้ง */
+    padding: 15px; border-radius: 16px; gap: 12px;
+    margin: 0 0 15px 0;
+}
+
+.brand-area { width: 100%; justify-content: center; margin-bottom: 5px; }
+
+/* ปรับ Wrapper ของปุ่มกด */
+.controls-wrapper {
+    display: flex; flex-wrap: wrap; /* ให้ปุ่มตัดแถวได้ */
+    gap: 8px; width: 100%; justify-content: center;
+}
+
+/* Select และปุ่มต่างๆ */
+#monthSelect { 
+    width: 100%; max-width: none; /* เต็มความกว้าง */
+    padding: 12px; font-size: 16px; /* ป้องกัน iOS Auto-zoom */
+}
+
+.btn-nav {
+    flex: 1 1 calc(50% - 8px); /* แบ่งเป็น 2 ปุ่มต่อแถว */
+    padding: 12px 5px; font-size: 13px;
+    justify-content: center;
+}
+
+/* ปุ่ม Sync Google ให้เต็มแถวเดียว */
+.btn-sync-google {
+    flex: 1 1 100%;
+    margin-top: 4px; padding: 14px;
+}
+
+/* รายชื่อในตาราง Admin */
+.day-cell {
+    min-height: 70px; padding: 4px; font-size: 10px;
+}
+
+.badge-boss {
+    font-size: 8.5px; padding: 2px;
+    max-width: 100%; overflow: hidden;
+}
+
     </style>
 </head>
 <body>
@@ -185,9 +232,11 @@
         btn.disabled = true;
 
         try {
-            const res = await fetch(`/sync-existing-shifts?month=${month}&year=2026&group=${currentGroup}`, { method: 'POST' });
-            const result = await res.text();
-            alert(result);
+            const res = await fetch(`/sync-existing-shifts?month=${month}&year=2026&group=${currentGroup}`, { 
+    method: 'POST' 
+});
+const result = await res.json(); // เปลี่ยนเป็น json
+alert(`✅ ซิงค์สำเร็จ! ${result.count} รายการ\nข้อความถูกตั้งค่าแจ้งเตือน 07:00 น. เรียบร้อยแล้ว`);
         } catch (err) {
             alert("เกิดข้อผิดพลาด: " + err.message);
         } finally {
@@ -227,7 +276,9 @@
             for (let d = 1; d <= daysInMonth; d++) {
                 let html = `<span class="date-number">${d}</span>`;
                 if(fullData[d]) {
-                    const boss = fullData[d].find(x => x.role.includes("นายทหารเวร")) || fullData[d][0];
+                
+const boss = fullData[d].find(x => x.role.includes("นายทหารเวร") && x.group === currentGroup) 
+             || fullData[d][0];
                     html += `<div class="badge-boss">⭐ ${boss.rank_name}</div>`;
                     html += `<div class="badge-count">👥 ทั้งหมด ${fullData[d].length} นาย</div>`;
                 }

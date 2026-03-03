@@ -150,44 +150,55 @@ app.get('/google/auth', (req, res) => {
     res.redirect(url);
 });
 
-app.get('/google/callback', async (req, res) => {
-    const { code, state } = req.query;
-    try {
-        const { tokens } = await oauth2Client.getToken(code);
-        const connection = await getConnection();
-        await connection.execute("UPDATE users SET google_token = ? WHERE id = ?", [JSON.stringify(tokens), state]);
-        await connection.end();
-        res.send('<h1>เชื่อมต่อสำเร็จ!</h1><p>ระบบบันทึกกุญแจเรียบร้อยแล้ว ปิดหน้านี้ได้เลยครับ</p>');
-    } catch (err) {
-        res.status(500).send("Error: " + err.message);
-    }
-});
+// ตัวอย่างภายใน callback หลังจากแลก Token สำเร็จ
+const { email, name } = googleUser; // ข้อมูลที่ได้จาก Google
+
+// ค้นหา ID จากฐานข้อมูลโดยใช้ Email
+const [rows] = await db.execute('SELECT id, rank_name FROM users WHERE email = ?', [email]);
+
+if (rows.length > 0) {
+    req.session.userId = rows[0].id;
+    req.session.userName = rows[0].rank_name;
+    req.session.userEmail = email;
+    res.redirect('/dashboard.html'); // ล็อกอินเสร็จส่งไปหน้า Dashboard เลย
+} else {
+    res.send("ไม่พบอีเมลนี้ในระบบฐานข้อมูลเวร กรุณาติดต่อแอดมิน");
+}
 
 // --- 5. API ต่างๆ (ใช้ getConnection ที่สร้างใหม่) ---
 app.post('/sync-existing-shifts', async (req, res) => {
     const { month, year, group } = req.query;
     try {
         const connection = await getConnection();
-        const sql = `
-            SELECT s.shift_date, s.role_type, u.rank_name, u.google_token 
-            FROM shift_assignments s
-            JOIN users u ON s.user_id = u.id
-            WHERE u.google_token IS NOT NULL 
-              AND MONTH(s.shift_date) = ? 
-              AND YEAR(s.shift_date) = ? 
-              AND s.group_name = ?
-        `;
-        const [shifts] = await connection.execute(sql, [month, year, group]);
-        await connection.end();
-        if (shifts.length === 0) return res.send("❌ ไม่พบเวรที่ซิงค์ได้");
-        let successCount = 0;
-        for (const shift of shifts) {
-            const summary = `${shift.role_type} (${shift.rank_name})`;
-            const isDone = await addDutyToCalendar(summary, shift.shift_date, shift.google_token);
-            if (isDone) successCount++;
+        
+        // 1. ดึงข้อมูลเวรทั้งหมดของเดือนนั้น (ต้องดึงทุกคนเพื่อมานับยอดรวม)
+        const [allShifts] = await connection.execute(
+            `SELECT s.*, u.rank_name, u.email 
+             FROM shift_assignments s 
+             JOIN users u ON s.user_id = u.id 
+             WHERE MONTH(s.shift_date) = ? AND YEAR(s.shift_date) = ?`,
+            [month, year]
+        );
+
+        // 2. กรองเฉพาะกลุ่มที่เลือก (กองพัน หรือ ศปก.) เพื่อส่ง Google Calendar
+        const targetShifts = allShifts.filter(s => s.group_type === group);
+
+        // 3. วนลูปส่งเข้า Google Calendar
+        for (const shift of targetShifts) {
+            // หาข้อมูลเวรของวันเดียวกันทั้งหมดเพื่อไปทำสรุปยอดในแจ้งเตือน
+            const dayShifts = allShifts.filter(s => 
+                new Date(s.shift_date).toDateString() === new Date(shift.shift_date).toDateString()
+            );
+            
+            // เรียกใช้ฟังก์ชันส่ง Calendar (ที่เราใส่ Logic 7 โมงเช้าไว้)
+            await sendToGoogleCalendar(auth, shift, dayShifts); 
         }
-        res.send(`✅ ซิงค์สำเร็จ ${successCount} รายการ`);
-    } catch (err) { res.status(500).send(err.message); }
+
+        await connection.end();
+        res.json({ success: true, count: targetShifts.length });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.get('/get-users', async (req, res) => {
@@ -346,6 +357,94 @@ app.get('/clear-shifts', async (req, res) => {
         res.status(500).send(err.message);
     }
 });
+
+// ==========================================
+// API สำหรับหน้า Dashboard (User ส่วนตัว)
+// ==========================================
+
+// 1. API เช็คว่าใคร Login อยู่
+app.get('/api/my-profile', (req, res) => {
+    if (!req.session.userId) return res.status(401).send('Unauthorized');
+    res.json({ 
+        id: req.session.userId, 
+        rank_name: req.session.userName,
+        email: req.session.userEmail 
+    });
+});
+
+// 2. API ดึงเวรเฉพาะของคนที่ Login
+app.get('/get-my-duty', async (req, res) => {
+    if (!req.session.userId) return res.status(401).send('Unauthorized');
+    try {
+        const connection = await getConnection();
+        const [rows] = await connection.execute(
+            'SELECT shift_date, role_type FROM shift_assignments WHERE user_id = ?',
+            [req.session.userId]
+        );
+        await connection.end();
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// ฟังก์ชันที่ใช้ส่ง Calendar
+// ==========================================
+
+// 1. ฟังก์ชันปรุงข้อความแจ้งเตือน (Logic ที่เพื่อนต้องการ)
+function prepareDutyMessage(myShift, allShiftsOfDay) {
+    // นับยอดรวมสำหรับนายทหารเวร
+    const kpCount = allShiftsOfDay.filter(s => s.group_type === 'กองพัน').length;
+    const spkCount = allShiftsOfDay.filter(s => s.group_type === 'ศปก').length;
+    
+    // หาชื่อนายทหารเวร (หัวหน้า) ของวันนั้น
+    const supervisor = allShiftsOfDay.find(s => s.role_type.includes('นายทหารเวร'));
+    const dashboardLink = process.env.DASHBOARD_URL || 'https://your-app.com/dashboard.html';
+
+    if (myShift.role_type.includes('นายทหารเวร')) {
+        return {
+            summary: `🛡️ เวรของคุณ: ${myShift.role_type}`,
+            description: `📊 สรุปยอดเวรวันนี้:\n- กองพัน: ${kpCount} นาย\n- ศปก.: ${spkCount} นาย\n\n🔗 ดูรายชื่อทั้งหมด: ${dashboardLink}`
+        };
+    } else {
+        return {
+            summary: `💂 เวรของคุณ: ${myShift.role_type}`,
+            description: `👤 นายทหารเวรวันนี้: ${supervisor ? supervisor.rank_name : 'ยังไม่ได้ระบุ'}\n\n🔗 ดูรายละเอียดคู่เวร: ${dashboardLink}`
+        };
+    }
+}
+
+// 2. ฟังก์ชันส่งเข้า Google Calendar แบบตั้งเวลา 7 โมงเช้า
+async function sendToGoogleCalendar(auth, shiftData, allShifts) {
+    const calendar = google.calendar({ version: 'v3', auth });
+    const msg = prepareDutyMessage(shiftData, allShifts);
+
+    const event = {
+        summary: msg.summary,
+        description: msg.description,
+        start: {
+            dateTime: `${shiftData.shift_date}T08:00:00`, // ล็อคเวลาเริ่ม 08:00
+            timeZone: 'Asia/Bangkok',
+        },
+        end: {
+            dateTime: `${shiftData.shift_date}T09:00:00`,
+            timeZone: 'Asia/Bangkok',
+        },
+        reminders: {
+            useDefault: false,
+            overrides: [
+                { method: 'popup', minutes: 60 } // 🔥 เตือนล่วงหน้า 60 นาที = 07:00 น. พอดี!
+            ]
+        }
+    };
+
+    return calendar.events.insert({
+        calendarId: shiftData.email,
+        resource: event,
+    });
+}
+
 
 // 6. Start Server (แก้ Port ให้รองรับ Render)
 const PORT = process.env.PORT || 3000;
