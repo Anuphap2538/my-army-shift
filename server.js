@@ -88,6 +88,55 @@ async function addDutyToCalendar(summary, date, tokenJson) {
     }
 }
 
+// ฟังก์ชันสร้าง Event แบบฉลาด (Smart Notification)
+async function createSmartCalendarEvent(auth, shiftData, allShiftsOfDay) {
+    const calendar = google.calendar({ version: 'v3', auth });
+    
+    // 1. คัดกรองข้อมูลเบื้องต้น
+    const kpCount = allShiftsOfDay.filter(s => s.group === 'กองพัน').length;
+    const spkCount = allShiftsOfDay.filter(s => s.group === 'ศปก').length;
+    const supervisor = allShiftsOfDay.find(s => s.role_type.includes('นายทหารเวร'));
+
+    let description = "";
+    let summary = "";
+
+    // 2. Logic แยกข้อความตามหน้าที่ (Role-based Content)
+    if (shiftData.role_type.includes('นายทหารเวร')) {
+        summary = `🛡️ วันของคุณ: ${shiftData.role_type}`;
+        description = `📊 ยอดเวรวันนี้: กองพัน ${kpCount} นาย / ศปก. ${spkCount} นาย\n\n🔗 ดูรายชื่อทั้งหมด: ${process.env.DASHBOARD_URL}`;
+    } else {
+        summary = `💂 เวร: ${shiftData.role_type}`;
+        description = `👤 นายทหารเวรวันนี้: ${supervisor ? supervisor.rank_name : 'ยังไม่ได้ระบุ'}\n\n🔗 ดูคู่เวรและรายละเอียด: ${process.env.DASHBOARD_URL}`;
+    }
+
+    // 3. ตั้งค่ากิจกรรม (Event) และการเตือน 07:00 น.
+    const event = {
+        summary: summary,
+        description: description,
+        location: 'หน่วยฝึก/ศปก.',
+        start: {
+            dateTime: `${shiftData.shift_date}T08:00:00`, // เริ่ม 8 โมงเพื่อล็อควันที่
+            timeZone: 'Asia/Bangkok',
+        },
+        end: {
+            dateTime: `${shiftData.shift_date}T08:15:00`,
+            timeZone: 'Asia/Bangkok',
+        },
+        reminders: {
+            useDefault: false,
+            overrides: [
+                { method: 'popup', minutes: 60 } // 🔥 เตือนล่วงหน้า 60 นาที = 07:00 น. พอดีเป๊ะ!
+            ]
+        }
+    };
+
+    // ส่งคำสั่งสร้าง Event ไปที่ Google
+    return calendar.events.insert({
+        calendarId: shiftData.email, // ส่งเข้าเมลเจ้าตัว
+        resource: event,
+    });
+}
+
 // --- 4. Google Auth Routes ---
 app.get('/google/auth', (req, res) => {
     const userId = req.query.user_id;
@@ -303,6 +352,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
+
 
 
 
