@@ -229,10 +229,18 @@ app.post('/sync-existing-shifts', async (req, res) => {
 app.get('/get-users', async (req, res) => {
     try {
         const connection = await getConnection();
-        const [rows] = await connection.execute("SELECT * FROM users ORDER BY id ASC");
+        // เช็คว่า google_token มีข้อมูลไหม ถ้ามีให้ส่ง is_linked: true
+        const [rows] = await connection.execute(`
+            SELECT id, rank_name, role, email, 
+            (google_token IS NOT NULL AND google_token != '') AS is_linked 
+            FROM users 
+            ORDER BY id ASC
+        `);
         await connection.end();
         res.json(rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) { 
+        res.status(500).json({ error: err.message }); 
+    }
 });
 
 app.post('/assign-shift', async (req, res) => {
@@ -419,23 +427,18 @@ app.get('/get-my-duty', async (req, res) => {
 
 // 1. ฟังก์ชันปรุงข้อความแจ้งเตือน (Logic ที่เพื่อนต้องการ)
 function prepareDutyMessage(myShift, allShiftsOfDay) {
-    // นับยอดรวมสำหรับนายทหารเวร
-    const kpCount = allShiftsOfDay.filter(s => s.group_type === 'กองพัน').length;
-    const spkCount = allShiftsOfDay.filter(s => s.group_type === 'ศปก').length;
-    
-    // หาชื่อนายทหารเวร (หัวหน้า) ของวันนั้น
-    const supervisor = allShiftsOfDay.find(s => s.role_type.includes('นายทหารเวร'));
-    const dashboardLink = process.env.DASHBOARD_URL || 'https://your-app.com/dashboard.html';
+    // ... โค้ดเดิมด้านบน ...
+    const loginLink = `${process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000'}/login-redirect`;
 
     if (myShift.role_type.includes('นายทหารเวร')) {
         return {
             summary: `🛡️ เวรของคุณ: ${myShift.role_type}`,
-            description: `📊 สรุปยอดเวรวันนี้:\n- กองพัน: ${kpCount} นาย\n- ศปก.: ${spkCount} นาย\n\n🔗 ดูรายชื่อทั้งหมด: ${dashboardLink}`
+            description: `📊 สรุปยอดเวรวันนี้:\n- กองพัน: ${kpCount} นาย\n- ศปก.: ${spkCount} นาย\n\n🔗 คลิกเพื่อดูรายชื่อทั้งหมดและยืนยัน:\n${loginLink}`
         };
     } else {
         return {
             summary: `💂 เวรของคุณ: ${myShift.role_type}`,
-            description: `👤 นายทหารเวรวันนี้: ${supervisor ? supervisor.rank_name : 'ยังไม่ได้ระบุ'}\n\n🔗 ดูรายละเอียดคู่เวร: ${dashboardLink}`
+            description: `👤 นายทหารเวรวันนี้: ${supervisor ? supervisor.rank_name : 'ยังไม่ได้ระบุ'}\n\n🔗 คลิกเพื่อดูรายละเอียดและคู่เวร:\n${loginLink}`
         };
     }
 }
@@ -470,6 +473,85 @@ async function sendToGoogleCalendar(auth, shiftData, allShifts) {
     });
 }
 
+// --- 🌟 ทางลัดสำหรับทหารที่คลิกมาจากปฏิทิน 🌟 ---
+app.get('/login-redirect', (req, res) => {
+    const url = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        prompt: 'consent',
+        // ขอ scope เพื่อเอา email มาเช็คในฐานข้อมูล
+        scope: [
+            'https://www.googleapis.com/auth/calendar.events',
+            'https://www.googleapis.com/auth/userinfo.email',
+            'openid'
+        ]
+    });
+    res.redirect(url);
+});
+
+app.post('/sync-existing-shifts', async (req, res) => {
+    const { month, year, group } = req.query;
+    try {
+        const connection = await getConnection();
+        
+        // 1. ดึงข้อมูลเวร + ข้อมูลผู้ใช้ (รวมถึง google_token) มาในทีเดียวเลย
+        const [allShifts] = await connection.execute(
+            `SELECT s.*, u.rank_name, u.email, u.google_token 
+             FROM shift_assignments s 
+             JOIN users u ON s.user_id = u.id 
+             WHERE MONTH(s.shift_date) = ? AND YEAR(s.shift_date) = ?`,
+            [month, year]
+        );
+
+        // 2. กรองเฉพาะกลุ่มที่ Admin เลือก (กองพัน หรือ ศปก.)
+        const targetShifts = allShifts.filter(s => s.group_name === group);
+
+        let successCount = 0;
+        let skipCount = 0;
+
+        // 3. วนลูปส่งเข้า Google Calendar
+        for (const shift of targetShifts) {
+            // 🛑 เช็คก่อน: ถ้าไม่มี Token ให้ข้ามคนนี้ไปเลย (ไม่ให้ Error ค้าง)
+            if (!shift.google_token) {
+                console.log(`⚠️ ข้าม ${shift.rank_name}: ยังไม่มี Token (ยังไม่เคย Login)`);
+                skipCount++;
+                continue; 
+            }
+
+            try {
+                // 🔑 สร้าง Auth เฉพาะตัวของทหารคนนั้น
+                const userAuth = new google.auth.OAuth2(
+                    '1055278075819-3degsqjsed1f3o8k35doqot6f45ih9re.apps.googleusercontent.com',
+                    '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',
+                    REDIRECT_URI
+                );
+                userAuth.setCredentials(JSON.parse(shift.google_token));
+
+                // หาข้อมูลเวรของวันนั้น (เพื่อทำสรุปยอดในแจ้งเตือน 07:00 น.)
+                const dayShifts = allShifts.filter(s => 
+                    new Date(s.shift_date).toDateString() === new Date(shift.shift_date).toDateString()
+                );
+                
+                // 📤 ส่งคำสั่งไปที่ Google Calendar
+                await sendToGoogleCalendar(userAuth, shift, dayShifts); 
+                successCount++;
+                console.log(`✅ ส่งเวรให้ ${shift.rank_name} เรียบร้อย`);
+            } catch (err) {
+                console.error(`❌ ส่งให้ ${shift.rank_name} ไม่สำเร็จ:`, err.message);
+                skipCount++;
+            }
+        }
+
+        await connection.end();
+        res.json({ 
+            success: true, 
+            message: `ส่งสำเร็จ ${successCount} นาย, ข้ามไป ${skipCount} นาย (ยังไม่ Login)`,
+            count: successCount 
+        });
+    } catch (err) {
+        console.error("❌ Sync Error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // 6. Start Server (แก้ Port ให้รองรับ Render)
 const PORT = process.env.PORT || 3000;

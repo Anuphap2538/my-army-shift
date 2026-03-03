@@ -198,9 +198,14 @@
             <a href="manage.html" class="nav-item"><i class="fas fa-tasks"></i> จัดการ/แก้ไขเวร (Manage)</a>
             <a href="report.html" class="nav-item"><i class="fas fa-file-contract"></i> สรุปรายงาน (Report)</a>
             
-            <a href="dashboard.html" class="nav-item" style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.05);">
-                <i class="fas fa-eye"></i> ดูหน้าจอผู้ใช้งาน
-            </a>
+            <div style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding: 10px;">
+                <button onclick="copyInviteLink()" id="btnCopy" class="nav-item" style="background: none; border: none; width: 100%; cursor: pointer; text-align: left; color: #2ecc71;">
+                    <i class="fas fa-share-nodes"></i> <span id="copyText">ก๊อปปี้ลิงก์ส่ง LINE</span>
+                </button>
+                <a href="dashboard.html" class="nav-item" style="padding: 10px 25px; font-size: 0.9em; opacity: 0.6;">
+                    <i class="fas fa-eye"></i> ดูหน้าจอ Dashboard
+                </a>
+            </div>
         </div>
     </nav>
 
@@ -247,7 +252,29 @@
             </a>
         </div>
     </div>
-
+<script>
+function copyInviteLink() {
+    // สร้างลิงก์อัตโนมัติจาก URL ที่ Render ให้อยู่แล้ว
+    const inviteUrl = window.location.origin + "/login-redirect";
+    
+    navigator.clipboard.writeText(inviteUrl).then(() => {
+        const copyText = document.getElementById('copyText');
+        const btn = document.getElementById('btnCopy');
+        
+        // แสดงสถานะว่าก๊อปสำเร็จ
+        const originalText = copyText.innerText;
+        copyText.innerText = "✅ ก๊อปปี้สำเร็จ!";
+        btn.style.color = "#f1c40f"; // เปลี่ยนเป็นสีเหลืองทองชั่วคราว
+        
+        setTimeout(() => {
+            copyText.innerText = originalText;
+            btn.style.color = "#2ecc71"; // กลับเป็นสีเขียว
+        }, 3000);
+    }).catch(err => {
+        alert("ก๊อปปี้ลิงก์ไม่ได้: " + window.location.origin + "/login-redirect");
+    });
+}
+</script>
 </body>
 </html>
 
