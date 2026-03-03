@@ -1,9 +1,8 @@
-const express = require('express');
-const mysql = require('mysql2/promise'); // ประกาศครั้งเดียวพอ
-const path = require('path');
-const { google } = require('googleapis');
-const session = require('express-session');
-
+import express from 'express';
+import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
