@@ -1,4 +1,13 @@
 {
+  "name": "my-army-shift",
+  "version": "1.0.0",
+  "description": "Army Shift Management System",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "dependencies": {
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
