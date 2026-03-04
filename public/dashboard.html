@@ -132,59 +132,41 @@
     const holidays = { "2026-03-03": "วันมาฆบูชา", "2026-03-04": "วันหยุดชดเชยมาฆบูชา" };
 
     async function init() {
-        try {
-            // 1. ดึง Profile
-            const res = await fetch('/api/my-profile');
-            if (res.status === 401) {
-                window.location.href = '/google/auth'; 
-                return;
-            }
-            const userData = await res.json(); 
-            currentUserName = userData.rank_name || userData.name; 
-            document.getElementById('userNameDisplay').innerText = currentUserName;
+    try {
+        const res = await fetch('/api/my-profile');
+        if (res.status === 401) { window.location.href = '/google/auth'; return; }
+        const userData = await res.json(); 
+        currentUserName = userData.rank_name; 
+        document.getElementById('userNameDisplay').innerText = currentUserName;
 
-            // 2. ดึงรายการเวรทั้งหมด (ลองเช็ค URL นี้ใน server.js มึงด้วยนะ)
-            // กูใส่ปี/เดือนปัจจุบันไปให้เลยเพื่อความชัวร์
-            const sRes = await fetch(`/get-report-calendar?month=${MONTH + 1}&year=${YEAR}`);
-            
-            if (!sRes.ok) {
-                throw new Error('API /get-report-calendar พังหรือหาไม่เจอ');
-            }
+        const sRes = await fetch('/get-my-duty');
+        const myShifts = await sRes.json();
+        
+        scheduleData = {};
 
-            const allShifts = await sRes.json();
-            console.log("เช็คข้อมูลจาก API:", allShifts); // ดูใน F12 ว่าข้อมูลมาไหม
-
-            scheduleData = {};
-            
-            // เช็คว่า allShifts เป็น Array ไหมก่อนจะลูป
-            if (allShifts && Array.isArray(allShifts)) {
-                allShifts.forEach(s => {
-                    // ป้องกันถ้า shift_date เป็น null
-                    if (!s.shift_date) return;
-
-                    const d = new Date(s.shift_date);
-                    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                    
-                    if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
-                    
-                    // เก็บชื่อทุกคนลงไป (ใช้ชื่อคอลัมน์สำรองเผื่อใน DB มึงตั้งชื่อต่างกัน)
-                    scheduleData[dateStr].push({ 
-                        name: s.rank_name || s.name || "ไม่ระบุชื่อ", 
-                        role: s.role_type || s.role || "เวร"
-                    });
+        if (myShifts && Array.isArray(myShifts)) {
+            myShifts.forEach(s => {
+                const d = new Date(s.shift_date);
+                // แก้ตรงนี้: ตัด String().padStart ออก เพื่อให้เป็นเลขโดด (3 ไม่ใช่ 03)
+                // ให้ตรงกับที่ฟังก์ชัน renderCalendar ใช้หาข้อมูล
+                const dateStr = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+                
+                if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
+                
+                scheduleData[dateStr].push({ 
+                    name: s.rank_name || currentUserName, 
+                    role: s.role_type || s.role || "เวร"
                 });
-            }
-
-            // 3. วาดปฏิทิน (เรียกตัวนี้เสมอเพื่อให้หน้าจอไม่ขาว)
-            renderCalendar();
-
-        } catch(e) { 
-            console.error("เกิดข้อผิดพลาดตอนเริ่มระบบ:", e);
-            // ถ้า Error ปุ๊บ ให้วาดปฏิทินเปล่ารอไว้เลย หน้าจอจะได้ไม่หาย
-            renderCalendar();
-            alert("โหลดข้อมูลไม่สำเร็จ: " + e.message);
+            });
         }
+
+        renderCalendar();
+
+    } catch(e) { 
+        console.error("Error:", e);
+        renderCalendar();
     }
+}
 
     function renderCalendar() {
         const grid = document.getElementById('calendarGrid');
