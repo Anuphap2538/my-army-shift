@@ -139,6 +139,41 @@
             .print-header { text-align: center; margin-bottom: 20px; }
         }
         .print-only { display: none; }
+
+        /* 🚨 ชุดแก้ตายตัว: บังคับให้อยู่ในเฟรม 1100px สำหรับหน้าจอคอม */
+@media (min-width: 1025px) {
+    .calendar-container, 
+    .top-navigation, 
+    #printSection {
+        max-width: 1100px !important; /* บังคับความกว้างสูงสุด */
+        width: 95% !important;        /* ให้เหลือขอบข้างนิดนึงไม่ให้ติดขอบจอ */
+        margin-left: auto !important;  /* จัดกลางฝั่งซ้าย */
+        margin-right: auto !important; /* จัดกลางฝั่งขวา */
+        float: none !important;        /* ป้องกันตัวไหนสั่งให้ลอยออกข้าง */
+    }
+
+    .calendar-grid {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: repeat(7, 1fr) !important; /* บังคับ 7 คอลัมน์เท่ากันเป๊ะ */
+    }
+
+    .day-cell {
+        box-sizing: border-box !important; /* ป้องกัน Padding ดันจนหลุดเฟรม */
+    }
+}
+
+/* 📱 แถม: กันหลุดสำหรับมือถือ (ถ้าจอมือถือมันเลื่อนซ้ายขวาได้ แสดงว่าหลุด) */
+@media (max-width: 1024px) {
+    .calendar-container, .top-navigation {
+        max-width: 100% !important;
+        margin: 10px !important;
+        box-sizing: border-box !important;
+    }
+    body {
+        overflow-x: hidden !important; /* ห้ามเลื่อนซ้ายขวาเด็ดขาด */
+    }
+}
     </style>
 </head>
 <body>
