@@ -12,14 +12,14 @@
             --primary-dark: #1e40af;
             --success: #10b981;
             --danger: #ef4444;
-            --glass: rgba(255, 255, 255, 0.9);
-            --border: rgba(0, 0, 0, 0.08);
+            --glass: rgba(255, 255, 255, 0.4);
+            --border: rgba(255, 255, 255, 0.2);
         }
 
         body {
             font-family: 'Sarabun', sans-serif;
             margin: 0; padding: 20px; min-height: 100vh;
-            background-image: linear-gradient(rgba(241, 245, 249, 0.8), rgba(241, 245, 249, 0.8)), 
+            background-image: linear-gradient(rgba(241, 245, 249, 0.3), rgba(241, 245, 249, 0.3)), 
                               url('images/pa.jpg');
             background-size: cover;
             background-position: center;
@@ -31,7 +31,7 @@
             content: "";
             position: fixed; inset: 0;
             background: inherit;
-            filter: blur(10px);
+            filter: blur(5px);
             z-index: -1;
         }
 
@@ -78,7 +78,7 @@
 
         .calendar-container {
             max-width: 1200px; margin: 0 auto; background: var(--glass);
-            backdrop-filter: blur(5px); border-radius: 25px; padding: 25px; 
+            backdrop-filter: blur(10px); border-radius: 25px; padding: 25px; 
             box-shadow: 0 5px 20px rgba(0,0,0,0.03); border: 1px solid var(--border);
         }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
