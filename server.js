@@ -502,28 +502,31 @@ app.post('/sync-existing-shifts', async (req, res) => {
     }
 });
 
-// --- 🌟 ทางลัดสำหรับทหารทุกคน (Login เพื่อมอบกุญแจ) 🌟 ---
-app.get('/login-redirect', (req, res) => {
+// --- 4. Google Auth Routes ---
+
+// ด่านที่ 1: ส่งคนไปหา Google (คนกดลิงก์นี้จากหน้าเว็บ หรือจากปฏิทิน)
+app.get('/google/auth', (req, res) => {
     const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         prompt: 'consent',
         scope: [
             'https://www.googleapis.com/auth/calendar.events',
-            'https://www.googleapis.com/auth/userinfo.email', // 👈 เพิ่มอันนี้
-            'openid' // 👈 และอันนี้
+            'https://www.googleapis.com/auth/userinfo.email',
+            'openid'
         ]
     });
     res.redirect(url);
 });
 
-// 2.Callback เช็ค Token และหา Email
-app.get('/google/callback', async (req, res) => { // หรือถ้ามึงเปลี่ยนชื่อเป็น /login-redirect แล้วก็ใช้ชื่อนั้น
+// ด่านที่ 2: จุดที่ Google ส่งคนกลับมา (ต้องตรงกับ Redirect URI ใน Console เป๊ะๆ)
+// ✅ เปลี่ยนจาก /google/callback เป็น /login-redirect ตามที่มึงตั้งใน Console
+app.get('/login-redirect', async (req, res) => { 
     const code = req.query.code;
     try {
         const { tokens } = await oauth2Client.getToken(code);
         oauth2Client.setCredentials(tokens);
 
-        // ดึง Email มาจาก Google เพื่อดูว่าเป็นใครในระบบ
+        // ดึง Email มาเช็คในฐานข้อมูล
         const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
         const userInfo = await oauth2.userinfo.get();
         const email = userInfo.data.email;
@@ -536,17 +539,17 @@ app.get('/google/callback', async (req, res) => { // หรือถ้ามึ
             req.session.userName = rows[0].rank_name;
             req.session.userEmail = email;
             
-            // เก็บ Token ไว้ให้ระบบใช้ส่ง Calendar 07:00 น.
+            // บันทึก Token (กุญแจ) ลง DB เพื่อให้ระบบส่ง Calendar ได้ตอน 7 โมงเช้า
             await connection.execute('UPDATE users SET google_token = ? WHERE email = ?', [JSON.stringify(tokens), email]);
             await connection.end();
             
             res.redirect('/dashboard.html'); 
         } else {
             await connection.end();
-            res.send(`❌ ไม่พบอีเมล ${email} ในระบบ! กรุณาแจ้ง Admin ให้เพิ่มเมลนี้ก่อนครับ`);
+            res.send(`❌ ไม่พบอีเมล ${email} ในฐานข้อมูล! กรุณาให้ Admin เพิ่มเมลมึงก่อน`);
         }
     } catch (err) {
-        console.error("❌ Google Callback Error:", err);
+        console.error("❌ Login Error:", err);
         res.status(500).send("Login Failed: " + err.message);
     }
 });
