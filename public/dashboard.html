@@ -5,114 +5,73 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบเช็คเวร | ภารกิจกองพัน & ศปก.</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4f46e5">
     <style>
-        :root { --sun: #e74c3c; --sat: #2980b9; --holiday: #ff7675; --work: #2c3e50; --bg: #f8f9fa; }
-        body { font-family: 'Sarabun', sans-serif; background: var(--bg); margin: 0; padding: 10px; }
-        .container { max-width: 550px; margin: auto; }
-        
-        .card { background: white; padding: 15px; border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); margin-bottom: 15px; }
-        select { width: 100%; padding: 12px; border-radius: 12px; border: 2px solid #eee; font-size: 16px; outline: none; appearance: none; background: url('data:image/svg+xml;charset=US-ASCII,<svg%20xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg"%20width%3D"24"%20height%3D"24"%20viewBox%3D"0%200%2024%2024"><path%20fill%3D"%23333"%20d%3D"M7%2010l5%205%205-5z"%2F><%2Fsvg>') no-repeat right 10px center; background-color: white; }
+        /* ------------------------------------------------------------------ */
+        /* ✨ ส่วนพื้นหลังที่เพิ่มใหม่ (Glassmorphism Style) ✨ */
+        /* ------------------------------------------------------------------ */
+        :root { 
+            --sun: #ef4444; --sat: #3b82f6; --holiday: #fb7185; 
+            --work: #1e293b; --bg: #f1f5f9; 
+            --glass: rgba(255, 255, 255, 0.7); /* ความใสของการ์ด */
+        }
 
-        .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #eee; }
-        .day-label { background: #34495e; color: white; padding: 10px 0; text-align: center; font-size: 12px; font-weight: bold; }
-        .day-label.sunday { background: var(--sun); }
-        .day-label.saturday { background: var(--sat); }
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            margin: 0; padding: 12px; min-height: 100vh;
+            /* ใส่รูปพื้นหลังเหมือนหน้า Import */
+            background-image: linear-gradient(rgba(241, 245, 249, 0.4), rgba(241, 245, 249, 0.4)), url('images/pa.jpg');
+            background-size: cover; background-position: center; background-attachment: fixed;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-        .cell { background: white; aspect-ratio: 1/1.1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 5px; position: relative; cursor: pointer; transition: 0.2s; }
-        .cell:hover { background: #f1f2f6; }
-        
-        .num { font-size: 18px; font-weight: bold; }
+        /* เอฟเฟกต์ Blur พื้นหลัง */
+        body::before { 
+            content: ""; position: fixed; inset: 0; background: inherit; 
+            filter: blur(5px); z-index: -1; 
+        }
+
+        .container { max-width: 600px; margin: 0 auto; position: relative; z-index: 1; }
+
+        /* ปรับการ์ดให้มีความใส (Glass Effect) */
+        .card { 
+            background: var(--glass) !important; 
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 16px; border-radius: 20px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1); 
+            margin-bottom: 12px; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* ปรับแต่งส่วนอื่นๆ ให้เข้ากับพื้นหลังใส */
+        .grid { background: rgba(0,0,0,0.05) !important; gap: 6px; }
+        .cell { background: rgba(255,255,255,0.5) !important; border: 1px solid rgba(255,255,255,0.2) !important; }
+        .cell:hover { background: rgba(255,255,255,0.8) !important; }
+
+        /* ------------------------------------------------------------------ */
+        /* 🛑 ส่วนโค้ดเดิม (ห้ามเปลี่ยน) */
+        /* ------------------------------------------------------------------ */
+        h3 { font-size: 1.1rem; color: var(--work); display: flex; align-items: center; gap: 8px; }
+        .day-label { text-align: center; font-size: 11px; font-weight: 700; color: #64748b; padding-bottom: 8px; }
+        .day-label.sunday { color: var(--sun); }
+        .day-label.saturday { color: var(--sat); }
+        .num { font-size: 16px; font-weight: 700; color: #334155; }
         .sun-text { color: var(--sun); }
         .sat-text { color: var(--sat); }
+        .duty-active { background: #4f46e5 !important; border-color: #4f46e5 !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); }
+        .duty-active .num { color: white !important; }
+        .duty-dot { width: 6px; height: 6px; background: #f59e0b; border-radius: 50%; position: absolute; bottom: 8px; }
+        .modal { display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); align-items: flex-end; }
+        .modal-content { background: #1e293b; color: white; width: 100%; border-radius: 24px 24px 0 0; padding: 24px; box-sizing: border-box; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .close-btn { font-size: 28px; color: #94a3b8; }
         .holiday-name { font-size: 8px; color: var(--holiday); text-align: center; margin-top: 2px; font-weight: bold; }
-
-        .duty-active { background: var(--sun) !important; color: white !important; border-radius: 8px; transform: scale(0.95); box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3); }
-        .duty-active .num, .duty-active .sun-text, .duty-active .sat-text, .duty-active .holiday-name { color: white !important; }
-        .duty-dot { width: 6px; height: 6px; background: #f39c12; border-radius: 50%; position: absolute; bottom: 5px; }
-
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); align-items: center; justify-content: center; }
-        .modal-content { background: #2c3e50; color: white; padding: 25px; border-radius: 24px; width: 90%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 20px; }
-        .close-btn { font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa; }
-        .close-btn:hover { color: white; }
-
-        
-        /* ส่วนพื้นฐาน สำหรับโทรศัพท์มือถือ */
-
-    :root { 
-        --sun: #ef4444; --sat: #3b82f6; --holiday: #fb7185; 
-        --work: #1e293b; --bg: #f1f5f9; --card: #ffffff;
-    }
-
-    body { 
-        font-family: 'Sarabun', sans-serif; background: var(--bg); 
-        margin: 0; padding: 12px; min-height: 100vh;
-        -webkit-tap-highlight-color: transparent;
-    }
-
-    .container { max-width: 600px; margin: 0 auto; }
-
-    .card { 
-        background: var(--card); padding: 16px; border-radius: 20px; 
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 12px; 
-    }
-
-    /* หัวข้อหน้าจอ */
-    h3 { font-size: 1.1rem; color: var(--work); display: flex; align-items: center; gap: 8px; }
-
-    /* ปฏิทิน Mobile-Friendly */
-    .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-    
-    .day-label { 
-        text-align: center; font-size: 11px; font-weight: 700; 
-        color: #64748b; padding-bottom: 8px; 
-    }
-
-    .cell { 
-        background: var(--card); aspect-ratio: 1/1.3; 
-        border-radius: 12px; border: 1px solid #e2e8f0;
-        display: flex; flex-direction: column; align-items: center; 
-        justify-content: flex-start; padding-top: 6px; position: relative;
-    }
-
-    .num { font-size: 16px; font-weight: 700; color: #334155; }
-    .sun-text { color: var(--sun); }
-    .sat-text { color: var(--sat); }
-
-    /* สถานะเวร */
-    .duty-active { 
-        background: #4f46e5 !important; border-color: #4f46e5 !important; 
-        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
-    }
-    .duty-active .num { color: white !important; }
-    .duty-dot { 
-        width: 6px; height: 6px; background: #f59e0b; border-radius: 50%; 
-        position: absolute; bottom: 8px; 
-    }
-
-    /* Modal แบบ Bottom Sheet (มาตรฐานแอปมือถือ) */
-    .modal { 
-        display: none; position: fixed; inset: 0; z-index: 2000;
-        background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
-        align-items: flex-end; /* เด้งจากล่าง */
-    }
-
-    .modal-content { 
-        background: #1e293b; color: white; width: 100%; 
-        border-radius: 24px 24px 0 0; padding: 24px;
-        box-sizing: border-box; animation: slideUp 0.3s ease-out;
-    }
-
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-    .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
-    .close-btn { font-size: 28px; color: #94a3b8; }
-</style>
-    
+    </style>
 </head>
 <body>
 
@@ -125,8 +84,8 @@
     </div>
 
     <div class="card" style="padding:0; overflow:hidden;">
-        <div style="padding: 15px; text-align: center; font-weight: bold; font-size: 1.2em; background: white;">มีนาคม 2569</div>
-        <div class="grid">
+        <div style="padding: 15px; text-align: center; font-weight: bold; font-size: 1.2em; background: rgba(255,255,255,0.3);">มีนาคม 2569</div>
+        <div class="grid" style="display: grid; grid-template-columns: repeat(7, 1fr);">
             <div class="day-label sunday">อา</div><div class="day-label">จ</div><div class="day-label">อ</div>
             <div class="day-label">พ</div><div class="day-label">พฤ</div><div class="day-label">ศ</div>
             <div class="day-label saturday">ส</div>
@@ -137,7 +96,7 @@
     <div id="dutyModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="displayDate" style="margin:0; font-size: 1.2em;"></h3>
+                <h3 id="displayDate" style="margin:0; font-size: 1.2em; color: white;"></h3>
                 <span class="close-btn" onclick="closeModal()">&times;</span>
             </div>
             <div id="partnerList"></div>
@@ -149,90 +108,67 @@
 </div>
 
 <script>
+    // ส่วน Script เดิมทั้งหมด ห้ามลบหรือเปลี่ยน
     let scheduleData = {};
-    let currentUserName = ""; // 👈 เพิ่มตัวแปรกลางเพื่อเก็บชื่อคน Login
+    let currentUserName = ""; 
     const YEAR = 2026;
     const MONTH = 2; 
     const holidays = { "2026-03-03": "วันมาฆบูชา", "2026-03-04": "วันหยุดชดเชยมาฆบูชา" };
 
+    // ... (ก๊อปปี้ Logic สคริปต์ตัวเดิมของเพื่อนมาวางต่อตรงนี้จนจบได้เลย)
     async function init() {
         try {
-            // 1. เช็คว่า Login หรือยัง
             const res = await fetch('/api/my-profile');
             if (res.status === 401) {
                 window.location.href = '/google/auth'; 
                 return;
             }
-            
             const userData = await res.json(); 
-            currentUserName = userData.rank_name; // 👈 เก็บชื่อไว้ใช้ทั่วทั้งหน้าเว็บ
-            
-            // แสดงชื่อผู้ใช้งานที่การ์ดด้านบน (แทนที่ Dropdown)
+            currentUserName = userData.rank_name; 
             const cardHeader = document.querySelector('.card h3');
             if(cardHeader) cardHeader.innerHTML = `👤 กำลังใช้งาน: <span style="color:#2980b9">${currentUserName}</span>`;
-            document.getElementById('userSelector').style.display = 'none'; // ซ่อน Dropdown ไปเลย
-
-            // 2. ดึงตารางเวร
+            document.getElementById('userSelector').style.display = 'none';
             const sRes = await fetch('/get-my-duty');
             const myShifts = await sRes.json();
-            
             scheduleData = {};
             myShifts.forEach(s => {
                 const dateStr = s.shift_date.split('T')[0];
                 if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
-                scheduleData[dateStr].push({ 
-                    name: currentUserName, 
-                    role: s.role_type 
-                });
+                scheduleData[dateStr].push({ name: currentUserName, role: s.role_type });
             });
-
             renderCalendar();
-        } catch(e) { 
-            console.error("Init Error:", e); 
-        }
+        } catch(e) { console.error("Init Error:", e); }
     }
 
     function renderCalendar() {
         const grid = document.getElementById('calendarGrid');
-        const selectedUser = currentUserName; // 👈 เปลี่ยนจากดึงค่าใน select มาเป็นชื่อเรา
+        const selectedUser = currentUserName;
         grid.innerHTML = '';
-
         const firstDay = new Date(YEAR, MONTH, 1).getDay();
         const daysInMonth = new Date(YEAR, MONTH + 1, 0).getDate();
-
         for (let x = 0; x < firstDay; x++) {
             const empty = document.createElement('div');
             empty.className = 'cell';
-            empty.style.background = '#f9f9f9';
             grid.appendChild(empty);
         }
-
         for (let i = 1; i <= daysInMonth; i++) {
             const dateStr = `${YEAR}-${String(MONTH + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
             const dayOfWeek = new Date(YEAR, MONTH, i).getDay();
             const holidayName = holidays[dateStr];
-
             const cell = document.createElement('div');
             cell.className = 'cell';
-
             let colorClass = "num";
             if(dayOfWeek === 0 || holidayName) colorClass = "num sun-text";
             else if(dayOfWeek === 6) colorClass = "num sat-text";
-
             cell.innerHTML = `<span class="${colorClass}">${i}</span>${holidayName ? `<span class="holiday-name">${holidayName}</span>` : ''}`;
-
             const duties = scheduleData[dateStr] || [];
-            // 👈 เช็คชื่อเรา (เปรียบเทียบแบบตัดช่องว่างออก)
             const isMe = duties.some(d => d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, ''));
-
-            if (isMe) {
-                cell.classList.add('duty-active');
-            } else if (duties.length > 0) {
+            if (isMe) { cell.classList.add('duty-active'); }
+            else if (duties.length > 0) {
                 const dot = document.createElement('div');
                 dot.className = 'duty-dot';
                 cell.appendChild(dot);
             }
-
             cell.onclick = () => showInfo(i, dateStr, holidayName, duties);
             grid.appendChild(cell);
         }
@@ -241,65 +177,44 @@
     function showInfo(day, dateStr, holidayName, duties) {
         const modal = document.getElementById('dutyModal');
         const list = document.getElementById('partnerList');
-        const selectedUser = currentUserName; // 👈 ใช้ชื่อเรา
-
+        const selectedUser = currentUserName;
         const myDuties = duties.filter(d => d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, ''));
-        
         if (myDuties.length === 0) return; 
-        
         modal.style.display = 'flex';
         document.getElementById('displayDate').innerText = `วันที่ ${day} มีนาคม 2569 ${holidayName ? '('+holidayName+')' : ''}`;
-
         const orderKongPan = ["นายทหารเวรกองพัน", "จ่าเวรร้อย สนน.", "จ่าเวรร้อย รก.", "จ่าเวรร้อย ทย.", "จ่าเวรร้อย ตอ.", "จ่าเวรหน่วยฝึกทหารใหม่", "จ่าเวร มว.สุนัขทหาร", "จ่าเวร ขส.", "จ่าเวรสูทกรรม"];
         const orderSPK = ["นายทหารเวร ศปก.", "เวรวิทยุ ผลัด 1", "เวรวิทยุ ผลัด 2", "เวรวิทยุ ผลัด 3", "เวร สยย.", "เวร ชป.", "เวรสายตรวจสุนัขทหาร"];
-
         const amIKongPan = myDuties.some(d => orderKongPan.some(role => d.role.includes(role)));
         const amISPK = myDuties.some(d => orderSPK.some(role => d.role.includes(role)));
-
         let showKP = true, showSPK = true;
         if (amIKongPan && !amISPK) showSPK = false; 
         if (amISPK && !amIKongPan) showKP = false;
-
         let gridStyle = (showKP && showSPK) ? "grid-template-columns: 1fr 1fr;" : "grid-template-columns: 1fr;";
         let html = `<div style="display: grid; ${gridStyle} gap: 20px;">`;
-        
         const findDuty = (roleName) => duties.find(d => d.role.replace(/\s+/g, '').includes(roleName.replace(/\s+/g, '')));
-
         if (showKP) {
             html += `<div><h4 style="color:#f1c40f; border-bottom:2px solid rgba(241, 196, 15, 0.3); margin: 0 0 15px 0; padding-bottom: 5px; font-size:1.3em; font-weight:bold;">🛡️ เวรกองพัน</h4>`;
             orderKongPan.forEach(role => {
                 const d = findDuty(role);
                 const isMeLine = d && d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, '');
-                html += `<div style="margin-bottom:12px;">
-                            <span style="font-size:0.85em; color:#bbb; display:block; margin-bottom: 2px;">${role}</span>
-                            <span style="font-size:1.1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold; border-bottom: 2px solid;' : 'color:#fff;'}">${d ? d.name : '-'}</span>
-                         </div>`;
+                html += `<div style="margin-bottom:12px;"><span style="font-size:0.85em; color:#bbb; display:block; margin-bottom: 2px;">${role}</span><span style="font-size:1.1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold; border-bottom: 2px solid;' : 'color:#fff;'}">${d ? d.name : '-'}</span></div>`;
             });
             html += `</div>`;
         }
-
         if (showSPK) {
             html += `<div><h4 style="color:#3498db; border-bottom:2px solid rgba(52, 152, 219, 0.3); margin: 0 0 15px 0; padding-bottom: 5px; font-size:1.3em; font-weight:bold;">📡 เวร ศปก.</h4>`;
             orderSPK.forEach(role => {
                 const d = findDuty(role);
                 const isMeLine = d && d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, '');
-                html += `<div style="margin-bottom:12px;">
-                            <span style="font-size:0.85em; color:#bbb; display:block; margin-bottom: 2px;">${role}</span>
-                            <span style="font-size:1.1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold; border-bottom: 2px solid;' : 'color:#fff;'}">${d ? d.name : '-'}</span>
-                         </div>`;
+                html += `<div style="margin-bottom:12px;"><span style="font-size:0.85em; color:#bbb; display:block; margin-bottom: 2px;">${role}</span><span style="font-size:1.1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold; border-bottom: 2px solid;' : 'color:#fff;'}">${d ? d.name : '-'}</span></div>`;
             });
             html += `</div>`;
         }
         html += `</div>`;
         list.innerHTML = html;
     }
-
     function closeModal() { document.getElementById('dutyModal').style.display = 'none'; }
-    window.onclick = function(event) {
-        const modal = document.getElementById('dutyModal');
-        if (event.target == modal) closeModal();
-    }
-    // saveAndRender เดิมไม่ได้ใช้แล้ว เพราะไม่มี dropdown ให้กด
+    window.onclick = function(event) { if (event.target == document.getElementById('dutyModal')) closeModal(); }
     init();
 </script>
 </body>
