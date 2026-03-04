@@ -133,43 +133,56 @@
 
     async function init() {
         try {
-            // 1. ดึง Profile ของเราก่อน (เพื่อเอาชื่อมาเช็คว่าวันไหนเป็นเวรเรา)
+            // 1. ดึง Profile
             const res = await fetch('/api/my-profile');
             if (res.status === 401) {
                 window.location.href = '/google/auth'; 
                 return;
             }
             const userData = await res.json(); 
-            currentUserName = userData.rank_name; // เก็บชื่อเราไว้ เช่น "จ.อ.อนุภาพ ทองเชื้อ"
+            currentUserName = userData.rank_name || userData.name; 
             document.getElementById('userNameDisplay').innerText = currentUserName;
 
-            // 2. ดึงรายการเวร "ทั้งหมด" ของเดือนนี้ (เพื่อให้เห็นชื่อเพื่อนร่วมเวร)
-            // หมายเหตุ: MONTH + 1 เพราะใน JS มีนาคมคือเลข 2 แต่ใน DB เรามักเก็บเป็นเลข 3
+            // 2. ดึงรายการเวรทั้งหมด (ลองเช็ค URL นี้ใน server.js มึงด้วยนะ)
+            // กูใส่ปี/เดือนปัจจุบันไปให้เลยเพื่อความชัวร์
             const sRes = await fetch(`/get-report-calendar?month=${MONTH + 1}&year=${YEAR}`);
-            const allShifts = await sRes.json();
             
-            scheduleData = {};
-            allShifts.forEach(s => {
-                // แปลงวันที่ให้แม่นยำ
-                const d = new Date(s.shift_date);
-                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                
-                if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
-                
-                // บันทึกชื่อทุกคนที่เข้าเวรในวันนั้นๆ ลงไป
-                scheduleData[dateStr].push({ 
-                    name: s.rank_name, // ชื่อเพื่อนร่วมเวรแต่ละคน
-                    role: s.role_type  // ตำแหน่งเวร
-                });
-            });
+            if (!sRes.ok) {
+                throw new Error('API /get-report-calendar พังหรือหาไม่เจอ');
+            }
 
-            // 3. สั่งวาดปฏิทิน (มันจะไปเช็คชื่อ currentUserName ใน scheduleData เอง)
+            const allShifts = await sRes.json();
+            console.log("เช็คข้อมูลจาก API:", allShifts); // ดูใน F12 ว่าข้อมูลมาไหม
+
+            scheduleData = {};
+            
+            // เช็คว่า allShifts เป็น Array ไหมก่อนจะลูป
+            if (allShifts && Array.isArray(allShifts)) {
+                allShifts.forEach(s => {
+                    // ป้องกันถ้า shift_date เป็น null
+                    if (!s.shift_date) return;
+
+                    const d = new Date(s.shift_date);
+                    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    
+                    if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
+                    
+                    // เก็บชื่อทุกคนลงไป (ใช้ชื่อคอลัมน์สำรองเผื่อใน DB มึงตั้งชื่อต่างกัน)
+                    scheduleData[dateStr].push({ 
+                        name: s.rank_name || s.name || "ไม่ระบุชื่อ", 
+                        role: s.role_type || s.role || "เวร"
+                    });
+                });
+            }
+
+            // 3. วาดปฏิทิน (เรียกตัวนี้เสมอเพื่อให้หน้าจอไม่ขาว)
             renderCalendar();
 
         } catch(e) { 
-            console.error("Init Error:", e);
-            // ถ้า Error หนักๆ อาจจะเพราะ Session หลุด ให้เด้งไป Auth
-            // window.location.href = '/google/auth';
+            console.error("เกิดข้อผิดพลาดตอนเริ่มระบบ:", e);
+            // ถ้า Error ปุ๊บ ให้วาดปฏิทินเปล่ารอไว้เลย หน้าจอจะได้ไม่หาย
+            renderCalendar();
+            alert("โหลดข้อมูลไม่สำเร็จ: " + e.message);
         }
     }
 
