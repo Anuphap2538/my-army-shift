@@ -69,7 +69,7 @@
             font-family: inherit; font-weight: 700; font-size: 16px; cursor: pointer; color: var(--primary-dark);
             background: white;
         }
- 
+  
         .btn-nav {
             padding: 10px 18px; border-radius: 12px; border: none;
             font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; 
@@ -204,42 +204,52 @@
     let fullData = {};
 
     async function renderReport(group) {
-        currentGroup = group;
-        const month = document.getElementById('monthSelect').value;
-        const monthLabel = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
-        document.getElementById('subtext').innerText = `กลุ่มงาน: ${group} | ประจำเดือน ${monthLabel} 2569`;
+    currentGroup = group;
+    const month = document.getElementById('monthSelect').value;
+    const monthLabel = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
+    
+    // เปลี่ยนจาก 2026 เป็นดึงปีปัจจุบันจากเครื่อง หรือระบุให้ตรงกับ DB
+    const currentYear = new Date().getFullYear(); 
+    const thaiYear = currentYear + 543;
 
-        try {
-            const resCal = await fetch(`/get-report-calendar?month=${month}&year=2026&group=${group}`);
-            const dataCal = await resCal.json();
+    document.getElementById('subtext').innerText = `กลุ่มงาน: ${group} | ประจำเดือน ${monthLabel} ${thaiYear}`;
 
-            fullData = {};
-            dataCal.forEach(item => {
-                const d = new Date(item.shift_date).getDate();
-                if(!fullData[d]) fullData[d] = [];
-                fullData[d].push(item);
-            });
+    try {
+        // ใช้ currentYear แทนเลข 2026
+        const resCal = await fetch(`/get-report-calendar?month=${month}&year=${currentYear}&group=${group}`);
+        const dataCal = await resCal.json();
 
-            const firstDay = new Date(2026, month - 1, 1).getDay();
-            const daysInMonth = new Date(2026, month, 0).getDate();
-            const body = document.getElementById('calendarBody');
-            body.innerHTML = '';
+        fullData = {};
+        dataCal.forEach(item => {
+            const d = new Date(item.shift_date).getDate();
+            if(!fullData[d]) fullData[d] = [];
+            fullData[d].push(item);
+        });
 
-            for (let i = 0; i < firstDay; i++) body.innerHTML += `<div></div>`;
+        // ใช้ currentYear ในการคำนวณปฏิทินด้วย
+        const firstDay = new Date(currentYear, month - 1, 1).getDay();
+        const daysInMonth = new Date(currentYear, month, 0).getDate();
+        const body = document.getElementById('calendarBody');
+        body.innerHTML = '';
 
-            for (let d = 1; d <= daysInMonth; d++) {
-                let html = `<span class="date-number">${d}</span>`;
-                if(fullData[d]) {
-                    const boss = fullData[d].find(x => (x.role || "").includes("นายทหารเวร")) || fullData[d][0];
-                    html += `<div class="badge-boss">⭐ ${boss.rank_name}</div>`;
-                    if(fullData[d].length > 1) {
-                        html += `<div class="badge-count">และอื่นๆ อีก ${fullData[d].length - 1} นาย</div>`;
-                    }
+        for (let i = 0; i < firstDay; i++) body.innerHTML += `<div></div>`;
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            let html = `<span class="date-number">${d}</span>`;
+            if(fullData[d]) {
+                const boss = fullData[d].find(x => (x.role || "").includes("นายทหารเวร")) || fullData[d][0];
+                html += `<div class="badge-boss">⭐ ${boss.rank_name}</div>`;
+                if(fullData[d].length > 1) {
+                    html += `<div class="badge-count">และอื่นๆ อีก ${fullData[d].length - 1} นาย</div>`;
                 }
-                body.innerHTML += `<div class="day-cell" onclick="openModal(${d})">${html}</div>`;
             }
-        } catch (e) { console.error(e); }
+            body.innerHTML += `<div class="day-cell" onclick="openModal(${d})">${html}</div>`;
+        }
+    } catch (e) { 
+        console.error("Fetch Error:", e);
+        alert("โหลดข้อมูลไม่สำเร็จ กรุณาเช็คการเชื่อมต่อ Database");
     }
+}
 
     function openModal(day) {
         const monthName = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
