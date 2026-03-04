@@ -140,52 +140,122 @@ async function createSmartCalendarEvent(auth, shiftData, allShiftsOfDay) {
 }
 
 // --- 4. Google Auth Routes ---
-// --- 4. Google Auth Routes ---
+
+// 🏃‍♂️ ทางไป: ด่านหน้า (มึงต้องใช้ลิงก์นี้ตอนจะ Login)
 app.get('/google/auth', (req, res) => {
-    const userId = req.query.user_id;
-    if (!userId) return res.status(400).send("ไม่พบ User ID");
     const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         prompt: 'consent',
-        scope: ['https://www.googleapis.com/auth/calendar.events'],
-        state: userId.toString()
+        scope: [
+            'https://www.googleapis.com/auth/calendar.events',
+            'https://www.googleapis.com/auth/userinfo.email',
+            'openid'
+        ]
     });
     res.redirect(url);
 });
 
+// 🏡 ทางกลับ: ด่านรับข้อมูล (Google จะส่ง Code มาที่นี่)
+// ✅ แก้ให้ตรงกับที่ตั้งใน Google Console เป๊ะๆ
+app.get('/login-redirect', async (req, res) => {
+    const code = req.query.code; // <--- Google ส่ง code มาตรงนี้
+    
+    // ถ้าไม่มี code แปลว่าคนหลงเข้ามา หรือระบบวน loop
+    if (!code) {
+        return res.status(400).send("❌ No Code Provided: มึงอาจจะกดลิงก์ผิด ให้ไปเข้าทาง /google/auth แทน");
+    }
+
+    try {
+        const { tokens } = await oauth2Client.getToken(code);
+        oauth2Client.setCredentials(tokens);
+
+        const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+        const userInfo = await oauth2.userinfo.get();
+        const email = userInfo.data.email;
+
+        const connection = await getConnection();
+        const [rows] = await connection.execute('SELECT id, rank_name FROM users WHERE email = ?', [email]);
+        
+        if (rows.length > 0) {
+            req.session.userId = rows[0].id;
+            req.session.userName = rows[0].rank_name;
+            req.session.userEmail = email;
+            
+            await connection.execute('UPDATE users SET google_token = ? WHERE email = ?', [JSON.stringify(tokens), email]);
+            await connection.end();
+            
+            res.redirect('/dashboard.html'); 
+        } else {
+            await connection.end();
+            res.send(`❌ ไม่พบอีเมล ${email} ในระบบ!`);
+        }
+    } catch (err) {
+        console.error("❌ Login Error:", err);
+        res.status(500).send("Login Failed: " + err.message);
+    }
+});
+
 // --- 5. API ต่างๆ (ใช้ getConnection ที่สร้างใหม่) ---
 app.post('/sync-existing-shifts', async (req, res) => {
-// ... โค้ดที่เหลือของเพื่อนด้านล่างยาวไปถึง 400 บรรทัด ...
-    const { month, year, group } = req.query;
+    const { month, year, group } = req.query; // รับค่าจาก URL เช่น ?month=10&year=2024&group=กองพัน
     try {
         const connection = await getConnection();
         
-        // 1. ดึงข้อมูลเวรทั้งหมดของเดือนนั้น (ต้องดึงทุกคนเพื่อมานับยอดรวม)
+        // 1. ⚡ ดึงข้อมูลเวร + Token ของแต่ละคนมาด้วย (เพิ่ม u.google_token และ s.group_name)
         const [allShifts] = await connection.execute(
-            `SELECT s.*, u.rank_name, u.email 
+            `SELECT s.*, u.rank_name, u.email, u.google_token 
              FROM shift_assignments s 
              JOIN users u ON s.user_id = u.id 
              WHERE MONTH(s.shift_date) = ? AND YEAR(s.shift_date) = ?`,
             [month, year]
         );
 
-        // 2. กรองเฉพาะกลุ่มที่เลือก (กองพัน หรือ ศปก.) เพื่อส่ง Google Calendar
-        const targetShifts = allShifts.filter(s => s.group_type === group);
+        // 2. ⚡ กรองเฉพาะกลุ่มที่เลือก (เช็คชื่อคอลัมน์ให้ตรงนะ ระหว่าง group_type กับ group_name)
+        const targetShifts = allShifts.filter(s => s.group_name === group);
+
+        let successCount = 0;
+        let skipCount = 0;
 
         // 3. วนลูปส่งเข้า Google Calendar
         for (const shift of targetShifts) {
-            // หาข้อมูลเวรของวันเดียวกันทั้งหมดเพื่อไปทำสรุปยอดในแจ้งเตือน
-            const dayShifts = allShifts.filter(s => 
-                new Date(s.shift_date).toDateString() === new Date(shift.shift_date).toDateString()
-            );
-            
-            // เรียกใช้ฟังก์ชันส่ง Calendar (ที่เราใส่ Logic 7 โมงเช้าไว้)
-            await sendToGoogleCalendar(auth, shift, dayShifts); 
+            // 🛑 ถ้าคนนี้ยังไม่เคย Login (ไม่มี Token) ให้ข้ามไปก่อน
+            if (!shift.google_token) {
+                console.log(`⚠️ ข้าม ${shift.rank_name}: ยังไม่ได้ผูก Google`);
+                skipCount++;
+                continue; 
+            }
+
+            try {
+                // 🔑 สร้างกุญแจ Auth เฉพาะของทหารคนนั้นๆ
+                const userAuth = new google.auth.OAuth2(
+                    '1055278075819-3degsqjsed1f3o8k35doqot6f45ih9re.apps.googleusercontent.com',
+                    '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',
+                    REDIRECT_URI
+                );
+                userAuth.setCredentials(JSON.parse(shift.google_token));
+
+                // หาข้อมูลเวรของวันเดียวกันทั้งหมด (เพื่อทำสรุปยอดในแจ้งเตือน 07:00 น.)
+                const dayShifts = allShifts.filter(s => 
+                    new Date(s.shift_date).toDateString() === new Date(shift.shift_date).toDateString()
+                );
+                
+                // 📤 ส่งเข้า Calendar ของทหารคนนั้น (ส่ง userAuth เข้าไปแทน auth ที่หายไป)
+                await sendToGoogleCalendar(userAuth, shift, dayShifts); 
+                successCount++;
+            } catch (err) {
+                console.error(`❌ ส่งให้ ${shift.rank_name} พลาด:`, err.message);
+                skipCount++;
+            }
         }
 
         await connection.end();
-        res.json({ success: true, count: targetShifts.length });
+        res.json({ 
+            success: true, 
+            message: `ส่งสำเร็จ ${successCount} นาย, ข้าม ${skipCount} นาย`,
+            count: successCount 
+        });
     } catch (err) {
+        console.error("❌ Sync Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -318,20 +388,6 @@ app.delete('/clear-all-users', async (req, res) => {
 });
 
 // 2. API สำหรับล้างข้อมูลการจัดเวรทั้งหมด (จากปุ่ม clearAllShifts)
-// หมายเหตุ: เปลี่ยนจาก app.get เป็น app.delete เพื่อความปลอดภัยตามมาตรฐาน
-app.delete('/clear-shifts', async (req, res) => {
-    try {
-        const connection = await getConnection();
-        await connection.execute("DELETE FROM shift_assignments");
-        await connection.end();
-        res.send('✅ ล้างข้อมูลการจัดเวรทั้งหมดเรียบร้อยแล้ว!');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send("ลบข้อมูลเวรไม่สำเร็จ: " + err.message);
-    }
-});
-
-// เปลี่ยนเป็น app.get ให้หมดเพื่อน จะได้ไม่ติด Method Not Allowed
 app.get('/clear-all-users', async (req, res) => {
     try {
         const connection = await getConnection();
@@ -391,7 +447,10 @@ app.get('/get-my-duty', async (req, res) => {
 
 // 1. ฟังก์ชันปรุงข้อความแจ้งเตือน (Logic ที่เพื่อนต้องการ)
 function prepareDutyMessage(myShift, allShiftsOfDay) {
-    // ... โค้ดเดิมด้านบน ...
+    const kpCount = allShiftsOfDay.filter(s => s.group_name === 'กองพัน').length;
+    const spkCount = allShiftsOfDay.filter(s => s.group_name === 'ศปก').length;
+    const supervisor = allShiftsOfDay.find(s => s.role_type.includes('นายทหารเวร'));
+
     const loginLink = `${process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000'}/login-redirect`;
 
     if (myShift.role_type.includes('นายทหารเวร')) {
@@ -499,73 +558,6 @@ app.post('/sync-existing-shifts', async (req, res) => {
     } catch (err) {
         console.error("❌ Sync Error:", err);
         res.status(500).json({ error: err.message });
-    }
-});
-
-// --- 4. Google Auth Routes ---
-
-// ด่านที่ 1: ส่งคนไปหา Google (คนกดลิงก์นี้จากหน้าเว็บ หรือจากปฏิทิน)
-app.get('/google/auth', (req, res) => {
-    const url = oauth2Client.generateAuthUrl({
-        access_type: 'offline',
-        prompt: 'consent',
-        scope: [
-            'https://www.googleapis.com/auth/calendar.events',
-            'https://www.googleapis.com/auth/userinfo.email',
-            'openid'
-        ]
-    });
-    res.redirect(url);
-});
-
-// ด่านที่ 2: จุดที่ Google ส่งคนกลับมา 
-app.get('/login-redirect', async (req, res) => {
-    const code = req.query.code;
-    if (!code) return res.status(400).send("No code provided");
-
-    try {
-        // 1. แลก Code เป็น Tokens
-        const { tokens } = await oauth2Client.getToken(code);
-        oauth2Client.setCredentials(tokens);
-
-        // 2. ⚡ แก้ตรงนี้: แทนที่จะ Verify ID Token ให้ใช้ userinfo.get แทน (ชัวร์กว่าเยอะ)
-        const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
-        const userInfo = await oauth2.userinfo.get();
-        const email = userInfo.data.email;
-
-        if (!email) {
-            throw new Error("Cannot get email from Google");
-        }
-
-        // 3. เชื่อมต่อ DB และหา User
-        const connection = await getConnection();
-        const [rows] = await connection.execute(
-            'SELECT id, rank_name FROM users WHERE email = ?', 
-            [email]
-        );
-        
-        if (rows.length > 0) {
-            // ตั้งค่า Session
-            req.session.userId = rows[0].id;
-            req.session.userName = rows[0].rank_name;
-            req.session.userEmail = email;
-            
-            // เก็บ Token ลง DB (ไว้ใช้ส่ง Calendar ตอน 7 โมงเช้า)
-            await connection.execute(
-                'UPDATE users SET google_token = ? WHERE email = ?', 
-                [JSON.stringify(tokens), email]
-            );
-            await connection.end();
-            
-            console.log(`✅ ${rows[0].rank_name} ล็อกอินสำเร็จ!`);
-            res.redirect('/dashboard.html'); 
-        } else {
-            await connection.end();
-            res.send(`❌ ไม่พบอีเมล ${email} ในระบบ! กรุณาให้ Admin เพิ่มเมลมึงก่อน`);
-        }
-    } catch (err) {
-        console.error("❌ Login Error Detail:", err);
-        res.status(500).send("Login Failed: " + err.message);
     }
 });
 
