@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            --primary: #3b82f6;      /* น้ำเงินอ่อน (Primary) */
-            --primary-dark: #1e40af; /* น้ำเงินเข้ม (Brand) */
+            --primary: #3b82f6;      /* น้ำเงินอ่อน */
+            --primary-dark: #1e40af; /* น้ำเงินเข้ม */
             --success: #10b981;
             --danger: #ef4444;
             --glass: rgba(255, 255, 255, 0.9);
@@ -19,101 +19,92 @@
         body {
             font-family: 'Sarabun', sans-serif;
             margin: 0; padding: 20px; min-height: 100vh;
-            /* 🖼️ เพิ่มภาพพื้นหลังแบบเบลอๆ */
             background-image: linear-gradient(rgba(241, 245, 249, 0.8), rgba(241, 245, 249, 0.8)), 
-                              url('images/laius.jpg'); /* ใส่ Path รูปภาพเพื่อนตรงนี้ */
+                              url('images/laius.jpg');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
             position: relative;
         }
 
-        /* เอฟเฟกต์เบลอพื้นหลัง */
         body::before {
             content: "";
             position: fixed; inset: 0;
             background: inherit;
-            filter: blur(10px); /* ระดับความเบลอ */
+            filter: blur(10px);
             z-index: -1;
         }
 
-        /* --- 🔵 แก้ไขส่วนหัว (แถบควบคุม) เป็นสีน้ำเงินอ่อน --- */
+        /* --- 🔵 ปรับ Navigation เป็นแบบแยกแถว (หัวข้อบน - ปุ่มล่าง) --- */
         .top-navigation {
             max-width: 1200px; margin: 0 auto 20px auto;
-            display: flex; justify-content: space-between; align-items: center;
-            background: var(--primary); /* สีน้ำเงินอ่อนตามโจทย์ */
-            padding: 20px 30px; border-radius: 20px; 
+            display: flex; flex-direction: column; /* วางซ้อนแนวตั้ง */
+            background: var(--primary);
+            padding: 25px 30px; border-radius: 25px; 
             border: 1px solid rgba(255,255,255,0.2);
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.15);
-            color: white; /* เปลี่ยนตัวอักษรเป็นสีขาวให้ตัดกับพื้นหลัง */
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2);
+            color: white;
+            gap: 15px;
         }
 
         .brand-area { display: flex; align-items: center; gap: 20px; }
-        .logo-img { width: 60px; height: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+        .logo-img { width: 65px; height: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
         
-        /* เปลี่ยนชื่อหน่วยงานให้กระชับและขาวสะอาด */
-        .brand-text h1 { 
-            margin: 0; font-size: 24px; color: white; font-weight: 700; 
-            letter-spacing: -0.5px;
-        }
-        .brand-text p { margin: 2px 0 0 0; font-size: 13px; color: rgba(255,255,255,0.8); font-weight: 400; }
+        .brand-text h1 { margin: 0; font-size: 26px; color: white; font-weight: 700; }
+        .brand-text p { margin: 2px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9); }
 
-        .controls-wrapper { display: flex; align-items: center; gap: 12px; }
+        /* แถวรวบรวมปุ่ม */
+        .controls-wrapper { 
+            display: flex; 
+            flex-wrap: wrap; 
+            align-items: center; 
+            gap: 10px; 
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding-top: 15px;
+            width: 100%;
+        }
 
         #monthSelect {
-            padding: 10px 15px; width: 160px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3);
+            padding: 10px 15px; width: 150px; border-radius: 12px; border: none;
             font-family: inherit; font-weight: 700; font-size: 16px; cursor: pointer; color: var(--primary-dark);
-            background: rgba(255,255,255,0.9);
+            background: white;
         }
 
         .btn-nav {
-            padding: 12px 20px; border-radius: 12px; border: none;
+            padding: 10px 18px; border-radius: 12px; border: none;
             font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; 
             transition: all 0.2s;
-            display: flex; align-items: center; gap: 8px;
-            display: inline-flex;    /* ใช้ inline-flex เพื่อให้ปุ่มกว้างตามเนื้อหา */
-    white-space: nowrap;     /* ⛔ ห้ามตัวหนังสือตกลงมาบรรทัดใหม่ */
-    flex-shrink: 0;          /* ⛔ ห้ามบีบขนาดปุ่มจนตัวหนังสือแตก */
-    
-    padding: 10px 15px;      /* ลด Padding ซ้ายขวานิดหน่อยเพื่อให้มีพื้นที่เพิ่ม */
-    justify-content: center;
-    align-items: center;
-    .controls-wrapper {
-    display: flex;
-    flex-wrap: nowrap;       /* ถ้าพื้นที่พอให้เรียงยาว */
-    overflow-x: auto;        /* ถ้ามือถือจอแคบเกินไป ให้ใช้วิธีเลื่อนซ้าย-ขวาแทนการตกบรรทัด */
-    gap: 8px;
-    padding-bottom: 5px;     /* เผื่อพื้นที่ให้ Scroll bar นิดนึงบนมือถือ */
-}
-}
-        
+            display: inline-flex; align-items: center; gap: 8px;
+            white-space: nowrap; /* ห้ามตกบรรทัด */
+            flex-shrink: 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
         .btn-kongpan { background: var(--danger) !important; color: white; }
         .btn-spk { background: var(--primary-dark) !important; color: white; }
-        .btn-sync-google { 
-            background: var(--success) !important; color: white;
-            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
-        }
-        .btn-nav:hover { transform: translateY(-2px); filter: brightness(1.05); }
+        .btn-print { background: #f59e0b !important; color: white; } /* สีส้มทอง */
+        .btn-sync-google { background: var(--success) !important; color: white; }
 
-        /* --- 📅 ปรับขนาดรายชื่อในปฏิทินให้พอดีตา --- */
+        .btn-nav:hover { transform: translateY(-2px); filter: brightness(1.1); }
+
+        /* --- 📅 ปฏิทิน --- */
         .calendar-container {
             max-width: 1200px; margin: 0 auto; background: var(--glass);
             backdrop-filter: blur(5px);
-            border-radius: 25px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.03);
+            border-radius: 25px; padding: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.03);
             border: 1px solid var(--border);
         }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
-        .weekday { text-align: center; font-weight: 700; color: #475569; font-size: 15px; padding-bottom: 15px; }
+        .weekday { text-align: center; font-weight: 700; color: #475569; font-size: 16px; padding-bottom: 15px; }
         
         .day-cell {
             min-height: 110px; background: #fff; border-radius: 15px; padding: 12px;
             border: 1px solid #f1f5f9; transition: 0.2s; cursor: pointer;
-            display: flex; flex-direction: column; box-shadow: inset 0 0 0 1px #f1f5f9;
+            display: flex; flex-direction: column;
         }
         .day-cell:hover { border-color: var(--primary); background: #f8fafc; }
-        .date-number { font-size: 16px; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; }
+        .date-number { font-size: 17px; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; }
         
-        /* ขยายขนาดชื่อทหารในหน้าปฏิทินให้พอดี */
         .badge-boss { 
             font-size: 13px; color: var(--primary-dark); font-weight: 700; 
             background: #eef2ff; padding: 6px 10px; border-radius: 8px; 
@@ -123,65 +114,22 @@
         }
         .badge-count { font-size: 11px; color: #94a3b8; margin-top: auto; font-weight: 500; }
 
-        /* --- 🏠 หน้า PopUp (Modal) --- */
+        /* --- 🏠 Modal --- */
         .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; }
-        .modal-content { background: white; width: 90%; max-width: 450px; border-radius: 25px; overflow: hidden; animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(15px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        
+        .modal-content { background: white; width: 90%; max-width: 450px; border-radius: 25px; overflow: hidden; }
         .modal-header { background: var(--primary-dark); color: white; padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; }
         .modal-body { padding: 15px; max-height: 400px; overflow-y: auto; }
-        
-        .duty-item { 
-            display: flex; justify-content: space-between; align-items: center; 
-            padding: 12px; border-bottom: 1px solid #f1f5f9; transition: 0.2s;
-        }
-        .duty-item:hover { background: #f8fafc; }
-        .duty-item b { font-size: 16px; color: #1e293b; }
-        
-        /* 🔴 ปุ่มลบ ปรับเฉดสีเมื่อ Hover */
-        .btn-del { 
-            color: #94a3b8; background: #f1f5f9; border: none; padding: 8px 12px; 
-            border-radius: 10px; cursor: pointer; transition: all 0.2s; font-size: 13px;
-        }
-        .btn-del:hover { 
-            color: white; background: var(--danger); /* เปลี่ยนเป็นสีแดง */
-            transform: scale(1.05); box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
-        }
+        .duty-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #f1f5f9; }
+        .btn-del { color: #94a3b8; background: #f1f5f9; border: none; padding: 8px 12px; border-radius: 10px; cursor: pointer; transition: 0.2s; }
+        .btn-del:hover { color: white; background: var(--danger); }
 
-        /* --- 📱 ส่วนที่แก้ไขใหม่สำหรับมือถือและจอเล็ก --- */
+        /* --- 📱 มือถือ --- */
         @media (max-width: 1024px) {
-            .top-navigation { 
-                flex-direction: column !important; 
-                align-items: center !important; 
-                padding: 20px !important; 
-                gap: 15px !important;
-            }
-
-            .controls-wrapper { 
-                display: grid !important; /* เปลี่ยนเป็น Grid เพื่อคุมแถว */
-                grid-template-columns: repeat(2, 1fr) !important; /* แบ่ง 2 คอลัมน์ */
-                width: 100% !important; 
-                gap: 10px !important; 
-                border-top: 1px solid rgba(255,255,255,0.2);
-                padding-top: 15px;
-            }
-
-            /* ให้ปุ่ม Sync และ ตัวเลือกเดือน เต็มแถว (Span 2) จะได้ไม่ตกบรรทัด */
-            #monthSelect, .btn-sync-google { 
-                grid-column: span 2 !important; 
-                width: 100% !important;
-            }
-
-            .btn-nav { 
-                font-size: 13px !important; 
-                padding: 10px 5px !important; 
-                justify-content: center !important;
-                white-space: nowrap !important; /* บังคับให้อยู่บรรทัดเดียว */
-            }
-
-            .brand-text h1 { font-size: 18px !important; text-align: center; }
-            .day-cell { min-height: 90px; padding: 5px; }
-            .badge-boss { font-size: 11px; width: 95%; }
+            .top-navigation { align-items: center; text-align: center; }
+            .controls-wrapper { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            #monthSelect, .btn-sync-google { grid-column: span 2; width: 100%; }
+            .brand-text h1 { font-size: 20px; }
+            .day-cell { min-height: 90px; }
         }
     </style>
 </head>
@@ -196,18 +144,10 @@
         </div>
     </div>
 
-    <div class="top-navigation no-print">
-    <div class="brand-area">
-        <img src="images/air.png" alt="Logo" class="logo-img"> 
-        <div class="brand-text">
-            <h1>กองพันทหารอากาศโยธิน รร.การบิน Dashboard</h1>
-            <p id="subtext" style="color: rgba(255,255,255,0.9);">ระบบบริหารจัดการและสรุปยอดกำลังพลเข้าเวรรายเดือน</p>
-        </div>
-    </div>
-
     <div class="controls-wrapper">
         <select id="monthSelect" onchange="renderReport(currentGroup)">
             <option value="1">มกราคม</option>
+            <option value="2">กุมภาพันธ์</option>
             <option value="3" selected>มีนาคม</option>
             <option value="12">ธันวาคม</option>
         </select>
@@ -244,10 +184,9 @@
             <h3 id="modalTitle" style="margin:0; font-size: 18px;">รายชื่อผู้เข้าเวร</h3>
             <span style="cursor:pointer; font-size:30px; line-height: 1;" onclick="closeModal()">&times;</span>
         </div>
-        <div id="modalBody" class="modal-body">
-            </div>
+        <div id="modalBody" class="modal-body"></div>
         <div style="padding:15px; text-align:right; border-top: 1px solid #eee;">
-            <button class="btn-nav" style="background:#64748b; color:white; margin-left:auto; font-size: 13px; padding: 10px 15px;" onclick="closeModal()">ปิดหน้าต่าง</button>
+            <button class="btn-nav" style="background:#64748b; color:white;" onclick="closeModal()">ปิดหน้าต่าง</button>
         </div>
     </div>
 </div>
@@ -283,7 +222,6 @@
             for (let d = 1; d <= daysInMonth; d++) {
                 let html = `<span class="date-number">${d}</span>`;
                 if(fullData[d]) {
-                    // หา "นายทหารเวร" มาโชว์เป็นตัวหลัก
                     const boss = fullData[d].find(x => (x.role || "").includes("นายทหารเวร")) || fullData[d][0];
                     html += `<div class="badge-boss">⭐ ${boss.rank_name}</div>`;
                     if(fullData[d].length > 1) {
@@ -303,7 +241,6 @@
         if (!fullData[day]) {
             body.innerHTML = '<p style="text-align:center; padding:30px;">ไม่มีข้อมูล</p>';
         } else {
-            // 🚀 Logic: เรียงลำดับให้นายทหารเวรอยู่บนสุดเสมอ
             const sortedList = [...fullData[day]].sort((a, b) => {
                 const isABoss = (a.role || "").includes("นายทหารเวร");
                 const isBBoss = (b.role || "").includes("นายทหารเวร");
