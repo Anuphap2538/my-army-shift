@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>นำเข้าข้อมูลเวร - กองพันทหารอากาศโยธิน</title>
+    <title>นำเข้าข้อมูลรายชื่อ - กองพันทหารอากาศโยธิน</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { --primary: #3b82f6; --primary-dark: #1e40af; --glass: rgba(255, 255, 255, 0.4); }
         body {
@@ -42,33 +43,76 @@
 <div class="container">
     <div class="header">
         <img src="images/air.png" alt="Logo" style="width: 70px;">
-        <h1>นำเข้าข้อมูลเวร</h1>
-        <p>อัปโหลดไฟล์ Excel (.xlsx) เพื่อเข้า TiDB</p>
+        <h1>นำเข้ารายชื่อกำลังพล</h1>
+        <p>อัปโหลดไฟล์ Excel เพื่อบันทึกลง TiDB Cloud</p>
     </div>
 
-    <form action="/upload-excel" method="POST" enctype="multipart/form-data">
-        <div class="upload-area" onclick="document.getElementById('excelFile').click()">
-            <i class="fas fa-file-excel"></i>
-            <p id="promptText">คลิกเพื่อเลือกไฟล์ Excel</p>
-            
-            <input type="file" id="excelFile" name="file" hidden accept=".xlsx, .xls" onchange="showFileName()">
-            
-            <div id="fileInfo"></div>
-        </div>
+    <div class="upload-area" onclick="document.getElementById('excelFile').click()">
+        <i class="fas fa-file-excel"></i>
+        <p id="promptText">คลิกเพื่อเลือกไฟล์ Excel รายชื่อ</p>
+        <input type="file" id="excelFile" hidden accept=".xlsx, .xls" onchange="handleFile(this)">
+        <div id="fileInfo"></div>
+    </div>
 
-        <div class="btn-group">
-            <a href="/" class="btn btn-back"><i class="fas fa-home"></i> หน้าหลัก</a>
-            <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> บันทึกลง TiDB</button>
-        </div>
-    </form>
+    <div class="btn-group">
+        <a href="/" class="btn btn-back"><i class="fas fa-home"></i> หน้าหลัก</a>
+        <button type="button" class="btn btn-primary" onclick="uploadData()" id="uploadBtn">
+            <i class="fas fa-cloud-upload-alt"></i> บันทึกลง TiDB
+        </button>
+    </div>
 </div>
 
 <script>
-    function showFileName() {
-        const file = document.getElementById('excelFile').files[0];
+    let jsonData = [];
+
+    function handleFile(input) {
+        const file = input.files[0];
         if (file) {
             document.getElementById('promptText').style.display = 'none';
-            document.getElementById('fileInfo').innerText = `✅ เลือกแล้ว: ${file.name}`;
+            document.getElementById('fileInfo').innerText = `✅ เลือกไฟล์แล้ว: ${file.name}`;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+                console.log("อ่านข้อมูลสำเร็จ:", jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    }
+
+    async function uploadData() {
+        if (jsonData.length === 0) {
+            alert("กรุณาเลือกไฟล์และรอให้ระบบอ่านข้อมูลก่อนครับ");
+            return;
+        }
+
+        const btn = document.getElementById('uploadBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+
+        try {
+            // 🎯 เรียกไปที่ API /import-users ตามโค้ด JS ของเพื่อนเป๊ะๆ
+            const response = await fetch('/import-users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ users: jsonData })
+            });
+
+            const result = await response.text();
+            if (response.ok) {
+                alert(result);
+                window.location.href = '/';
+            } else {
+                alert("เกิดข้อผิดพลาด: " + result);
+            }
+        } catch (err) {
+            alert("เชื่อมต่อ Server ไม่ได้: " + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> บันทึกลง TiDB';
         }
     }
 </script>
