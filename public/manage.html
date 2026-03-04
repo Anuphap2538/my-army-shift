@@ -9,8 +9,67 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#4f46e5">
    <style>
-    :root { --primary: #2563eb; --bg: #f8fafc; }
-    body { font-family: 'Sarabun', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+    :root {
+        --primary: #3b82f6;
+        --primary-dark: #1e40af;
+        --success: #10b981;
+        --danger: #ef4444;
+        /* ปรับให้ขาวจางๆ เห็นพื้นหลัง (0.4) */
+        --glass: rgba(255, 255, 255, 0.4); 
+        --border: rgba(255, 255, 255, 0.2);
+    }
+
+    body {
+        font-family: 'Sarabun', sans-serif;
+        margin: 0; padding: 20px; min-height: 100vh;
+        /* ดึงรูป pa.jpg มาใช้ และลดความเข้มสีทับหน้าลงเหลือ 0.3 */
+        background-image: linear-gradient(rgba(241, 245, 249, 0.3), rgba(241, 245, 249, 0.3)), 
+                          url('images/pa.jpg');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        position: relative;
+    }
+
+    /* ทำ Effect เบลอพื้นหลังให้ดูนุ่มนวล */
+    body::before {
+        content: "";
+        position: fixed; inset: 0;
+        background: inherit;
+        filter: blur(5px); /* ลดความเบลอลงเพื่อให้เห็นภาพชัดขึ้น */
+        z-index: -1;
+    }
+
+    /* ปรับแต่ง Container ให้เป็นกระจกใสๆ (Glassmorphism) */
+    .container {
+        max-width: 1000px; 
+        margin: 0 auto; 
+        background: var(--glass);
+        backdrop-filter: blur(10px); 
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 25px; 
+        padding: 30px;
+        border: 1px solid var(--border);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    /* ส่วนอื่นๆ เช่น Header ให้ปรับตามความสวยงาม */
+    .header {
+        background: var(--primary);
+        color: white;
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 25px;
+        text-align: center;
+    }
+
+    /* ปรับตารางให้โปร่งแสงนิดๆ ด้วยจะสวยมาก */
+    table {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 10px;
+        overflow: hidden;
+    }
     
     /* แบ่งฝั่งซ้าย (350px) และ ฝั่งขวา (ที่เหลือ) */
     .app-container { 
