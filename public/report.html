@@ -140,39 +140,46 @@
         }
         .print-only { display: none; }
 
-        /* 🚨 ชุดแก้ตายตัว: บังคับให้อยู่ในเฟรม 1100px สำหรับหน้าจอคอม */
+        /* 🚨 ไม้ตายสุดท้าย: บังคับทุกอย่างให้อยู่ในกรอบ 100% */
 @media (min-width: 1025px) {
-    .calendar-container, 
-    .top-navigation, 
-    #printSection {
-        max-width: 1100px !important; /* บังคับความกว้างสูงสุด */
-        width: 95% !important;        /* ให้เหลือขอบข้างนิดนึงไม่ให้ติดขอบจอ */
-        margin-left: auto !important;  /* จัดกลางฝั่งซ้าย */
-        margin-right: auto !important; /* จัดกลางฝั่งขวา */
-        float: none !important;        /* ป้องกันตัวไหนสั่งให้ลอยออกข้าง */
-    }
-
-    .calendar-grid {
-        width: 100% !important;
-        display: grid !important;
-        grid-template-columns: repeat(7, 1fr) !important; /* บังคับ 7 คอลัมน์เท่ากันเป๊ะ */
-    }
-
-    .day-cell {
-        box-sizing: border-box !important; /* ป้องกัน Padding ดันจนหลุดเฟรม */
+    .calendar-container, .top-navigation {
+        max-width: 1100px !important;
+        margin: 0 auto 20px auto !important;
+        overflow: hidden !important; /* 👈 ห้ามอะไรโผล่ออกมานอกกรอบเด็ดขาด */
     }
 }
 
-/* 📱 แถม: กันหลุดสำหรับมือถือ (ถ้าจอมือถือมันเลื่อนซ้ายขวาได้ แสดงว่าหลุด) */
-@media (max-width: 1024px) {
-    .calendar-container, .top-navigation {
-        max-width: 100% !important;
-        margin: 10px !important;
-        box-sizing: border-box !important;
-    }
-    body {
-        overflow-x: hidden !important; /* ห้ามเลื่อนซ้ายขวาเด็ดขาด */
-    }
+.calendar-grid {
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr) !important; /* 👈 บังคับแบ่ง 7 ช่องเท่ากันเป๊ะ */
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.day-cell {
+    min-width: 0 !important;   /* 👈 สำคัญมาก: อนุญาตให้ช่องย่อขนาดได้ */
+    overflow: hidden !important; /* ถ้าเนื้อหาเยอะให้ซ่อน ไม่ให้ดันกรอบ */
+    word-break: break-all !important; /* ถ้าคำยาวเกินให้ตัดขึ้นบรรทัดใหม่ */
+    display: flex;
+    flex-direction: column;
+}
+
+.badge-boss {
+    width: 95% !important;     /* บังคับความกว้างป้ายชื่อ */
+    white-space: nowrap !important; /* ห้ามขึ้นบรรทัดใหม่สำหรับชื่อหลัก */
+    overflow: hidden !important;
+    text-overflow: ellipsis !important; /* ถ้าชื่อยาวเกินให้ขึ้น ... */
+    display: block !important;
+}
+
+.controls-wrapper {
+    flex-wrap: wrap !important; /* ถ้าปุ่มเยอะเกินให้ลงมาบรรทัดใหม่ ห้ามดันแถบเมนูทะลุ */
+}
+
+/* ป้องกันรูปภาพหรือ Logo ดันกรอบ */
+.logo-img {
+    max-width: 100%;
+    height: auto;
 }
     </style>
 </head>
