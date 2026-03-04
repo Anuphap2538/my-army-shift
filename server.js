@@ -429,15 +429,15 @@ app.get('/api/my-profile', (req, res) => {
 app.get('/get-my-duty', async (req, res) => {
     try {
         const connection = await getConnection();
-        // SQL ตัวนี้จะดึงทั้ง ศปก. และ เวรวิทยุ ของทุกคนในเดือนมีนาคมออกมา
+        // ใช้ LEFT JOIN เพื่อป้องกันข้อมูลเวรหายถ้าหาชื่อ User ไม่เจอ
         const [rows] = await connection.execute(
-            `SELECT s.shift_date, s.role_type, u.rank_name 
+            `SELECT s.shift_date, s.role_type, u.rank_name, s.user_id 
              FROM shift_assignments s
-             JOIN users u ON s.user_id = u.id 
+             LEFT JOIN users u ON s.user_id = u.id 
              WHERE MONTH(s.shift_date) = 3 AND YEAR(s.shift_date) = 2026`
         );
         await connection.end();
-        res.json(rows);
+        res.json(rows); // ส่งข้อมูลออกไปให้หมด
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
