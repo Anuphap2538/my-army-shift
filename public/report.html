@@ -271,9 +271,9 @@
         const summary = {};
         Object.keys(fullData).forEach(day => {
     fullData[day].forEach(item => {
-        // เช็คว่าถ้าหน้าที่คือ "เวรวิทยุ" ให้เติมผลัดเข้าไป แต่ถ้าไม่ใช่ให้โชว์แค่ชื่อหน้าที่
+        // เช็คแบบละเอียด: ต้องเป็นเวรวิทยุ และ shift_turn ต้องไม่ว่าง
         let roleDisplay = item.role;
-        if (item.role.includes("เวรวิทยุ") && item.shift_turn) {
+        if (item.role === "เวรวิทยุ" && item.shift_turn && item.shift_turn.trim() !== "") {
             roleDisplay = `${item.role} (${item.shift_turn})`;
         }
         
@@ -287,9 +287,9 @@
 
 // --- แก้ไขในฟังก์ชัน openModal (หน้า PopUp) ---
 body.innerHTML = sortedEntries.map(d => {
-    // เช็คเงื่อนไขเหมือนกัน: เฉพาะเวรวิทยุที่จะโชว์ผลัด
+    // ใช้เงื่อนไขเดียวกันเป๊ะ เพื่อให้ผลออกมาเหมือนกัน
     let roleDisplay = d.role;
-    if (d.role.includes("เวรวิทยุ") && d.shift_turn) {
+    if (d.role === "เวรวิทยุ" && d.shift_turn && d.shift_turn.trim() !== "") {
         roleDisplay = `${d.role} (${d.shift_turn})`;
     }
     
