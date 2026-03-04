@@ -518,38 +518,53 @@ app.get('/google/auth', (req, res) => {
     res.redirect(url);
 });
 
-// ด่านที่ 2: จุดที่ Google ส่งคนกลับมา (ต้องตรงกับ Redirect URI ใน Console เป๊ะๆ)
-// ✅ เปลี่ยนจาก /google/callback เป็น /login-redirect ตามที่มึงตั้งใน Console
-app.get('/login-redirect', async (req, res) => { 
+// ด่านที่ 2: จุดที่ Google ส่งคนกลับมา 
+app.get('/login-redirect', async (req, res) => {
     const code = req.query.code;
+    if (!code) return res.status(400).send("No code provided");
+
     try {
+        // 1. แลก Code เป็น Tokens
         const { tokens } = await oauth2Client.getToken(code);
         oauth2Client.setCredentials(tokens);
 
-        // ดึง Email มาเช็คในฐานข้อมูล
+        // 2. ⚡ แก้ตรงนี้: แทนที่จะ Verify ID Token ให้ใช้ userinfo.get แทน (ชัวร์กว่าเยอะ)
         const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
         const userInfo = await oauth2.userinfo.get();
         const email = userInfo.data.email;
 
+        if (!email) {
+            throw new Error("Cannot get email from Google");
+        }
+
+        // 3. เชื่อมต่อ DB และหา User
         const connection = await getConnection();
-        const [rows] = await connection.execute('SELECT id, rank_name FROM users WHERE email = ?', [email]);
+        const [rows] = await connection.execute(
+            'SELECT id, rank_name FROM users WHERE email = ?', 
+            [email]
+        );
         
         if (rows.length > 0) {
+            // ตั้งค่า Session
             req.session.userId = rows[0].id;
             req.session.userName = rows[0].rank_name;
             req.session.userEmail = email;
             
-            // บันทึก Token (กุญแจ) ลง DB เพื่อให้ระบบส่ง Calendar ได้ตอน 7 โมงเช้า
-            await connection.execute('UPDATE users SET google_token = ? WHERE email = ?', [JSON.stringify(tokens), email]);
+            // เก็บ Token ลง DB (ไว้ใช้ส่ง Calendar ตอน 7 โมงเช้า)
+            await connection.execute(
+                'UPDATE users SET google_token = ? WHERE email = ?', 
+                [JSON.stringify(tokens), email]
+            );
             await connection.end();
             
+            console.log(`✅ ${rows[0].rank_name} ล็อกอินสำเร็จ!`);
             res.redirect('/dashboard.html'); 
         } else {
             await connection.end();
-            res.send(`❌ ไม่พบอีเมล ${email} ในฐานข้อมูล! กรุณาให้ Admin เพิ่มเมลมึงก่อน`);
+            res.send(`❌ ไม่พบอีเมล ${email} ในระบบ! กรุณาให้ Admin เพิ่มเมลมึงก่อน`);
         }
     } catch (err) {
-        console.error("❌ Login Error:", err);
+        console.error("❌ Login Error Detail:", err);
         res.status(500).send("Login Failed: " + err.message);
     }
 });
