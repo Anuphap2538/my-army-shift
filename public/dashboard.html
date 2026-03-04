@@ -133,40 +133,43 @@
 
     async function init() {
         try {
-            // 1. ดึง Profile
+            // 1. ดึง Profile ของเราก่อน (เพื่อเอาชื่อมาเช็คว่าวันไหนเป็นเวรเรา)
             const res = await fetch('/api/my-profile');
             if (res.status === 401) {
                 window.location.href = '/google/auth'; 
                 return;
             }
             const userData = await res.json(); 
-            currentUserName = userData.rank_name; 
+            currentUserName = userData.rank_name; // เก็บชื่อเราไว้ เช่น "จ.อ.อนุภาพ ทองเชื้อ"
             document.getElementById('userNameDisplay').innerText = currentUserName;
 
-            // 2. ดึงรายการเวร
-            const sRes = await fetch('/get-my-duty');
-            const myShifts = await sRes.json();
+            // 2. ดึงรายการเวร "ทั้งหมด" ของเดือนนี้ (เพื่อให้เห็นชื่อเพื่อนร่วมเวร)
+            // หมายเหตุ: MONTH + 1 เพราะใน JS มีนาคมคือเลข 2 แต่ใน DB เรามักเก็บเป็นเลข 3
+            const sRes = await fetch(`/get-report-calendar?month=${MONTH + 1}&year=${YEAR}`);
+            const allShifts = await sRes.json();
             
-            // --- เริ่มต้นส่วนที่มึงถาม (วางทับตรงนี้) ---
             scheduleData = {};
-            myShifts.forEach(s => {
-                // แปลงวันที่ให้เป็นฟอร์แมต YYYY-MM-DD ให้แม่นยำ
+            allShifts.forEach(s => {
+                // แปลงวันที่ให้แม่นยำ
                 const d = new Date(s.shift_date);
                 const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                 
                 if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
                 
-                // เก็บข้อมูลเข้า scheduleData โดยใช้ชื่อจาก Profile
+                // บันทึกชื่อทุกคนที่เข้าเวรในวันนั้นๆ ลงไป
                 scheduleData[dateStr].push({ 
-                    name: currentUserName, 
-                    role: s.role_type 
+                    name: s.rank_name, // ชื่อเพื่อนร่วมเวรแต่ละคน
+                    role: s.role_type  // ตำแหน่งเวร
                 });
             });
-            // --- สิ้นสุดส่วนที่วางทับ ---
 
+            // 3. สั่งวาดปฏิทิน (มันจะไปเช็คชื่อ currentUserName ใน scheduleData เอง)
             renderCalendar();
+
         } catch(e) { 
-            console.error("Init Error:", e); 
+            console.error("Init Error:", e);
+            // ถ้า Error หนักๆ อาจจะเพราะ Session หลุด ให้เด้งไป Auth
+            // window.location.href = '/google/auth';
         }
     }
 
