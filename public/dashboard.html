@@ -155,12 +155,9 @@
     
     if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
     
-    // ลองหาชื่อจากทุกคอลัมน์ที่น่าจะเป็นไปได้ (rank_name, name, หรือ user_id)
-    const displayName = s.rank_name || s.name || s.user_id || "ไม่ทราบชื่อ";
-    
     scheduleData[dateStr].push({ 
-        name: displayName, 
-        role: s.role_type || s.role || "เวร"
+        name: s.rank_name, // ตอนนี้ s.rank_name จะมีค่าแล้วเพราะเราแก้ SQL JOIN มา
+        role: s.role_type 
     });
 });
             // --- สิ้นสุดส่วนที่วางทับ ---

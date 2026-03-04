@@ -430,17 +430,21 @@ app.get('/get-my-duty', async (req, res) => {
     if (!req.session.userId) return res.status(401).send('Unauthorized');
     try {
         const connection = await getConnection();
+        // แก้ SQL ใหม่: ดึงทุกคน และ JOIN เอาชื่อยศ (rank_name) มาด้วย
         const [rows] = await connection.execute(
-            'SELECT shift_date, role_type FROM shift_assignments WHERE user_id = ?',
-            [req.session.userId]
+            `SELECT s.shift_date, s.role_type, u.rank_name 
+             FROM shift_assignments s
+             JOIN users u ON s.user_id = u.id 
+             WHERE MONTH(s.shift_date) = 3 AND YEAR(s.shift_date) = 2026`, 
+            []
         );
         await connection.end();
         res.json(rows);
     } catch (err) {
+        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
-
 // ==========================================
 // ฟังก์ชันที่ใช้ส่ง Calendar
 // ==========================================
