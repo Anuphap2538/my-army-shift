@@ -150,18 +150,19 @@
             // --- เริ่มต้นส่วนที่มึงถาม (วางทับตรงนี้) ---
             scheduleData = {};
             myShifts.forEach(s => {
-                // แปลงวันที่ให้เป็นฟอร์แมต YYYY-MM-DD ให้แม่นยำ
-                const d = new Date(s.shift_date);
-                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                
-                if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
-                
-                // เก็บข้อมูลเข้า scheduleData โดยใช้ชื่อจาก Profile
-                scheduleData[dateStr].push({ 
-                    name: s.rank_name, 
-                    role: s.role_type 
-                });
-            });
+    const d = new Date(s.shift_date);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    
+    if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
+    
+    // ลองหาชื่อจากทุกคอลัมน์ที่น่าจะเป็นไปได้ (rank_name, name, หรือ user_id)
+    const displayName = s.rank_name || s.name || s.user_id || "ไม่ทราบชื่อ";
+    
+    scheduleData[dateStr].push({ 
+        name: displayName, 
+        role: s.role_type || s.role || "เวร"
+    });
+});
             // --- สิ้นสุดส่วนที่วางทับ ---
 
             renderCalendar();
