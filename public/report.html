@@ -268,29 +268,44 @@
 
     // 2. ฟังก์ชันเตรียมข้อมูลพิมพ์ (เพิ่มใหม่ตรงนี้!)
     function prepareAndPrint() {
-        const monthLabel = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
-        const currentYearThai = 2569; // ตามหัวข้อใน PDF ของเพื่อน
-        
-        document.getElementById('printTitle').innerText = "สรุปตารางเวรแบบปฏิทิน";
-        document.getElementById('printSubTitle').innerText = `กลุ่มงาน: ${currentGroup} | ประจำเดือน ${monthLabel} ${currentYearThai}`;
-        
-        const body = document.getElementById('printTableBody');
-        body.innerHTML = '';
+    console.log("เริ่มการเตรียมพิมพ์..."); // เช็คใน F12 ว่าประโยคนี้ขึ้นไหม
+    
+    if (!fullData || Object.keys(fullData).length === 0) {
+        alert("ไม่พบข้อมูลเวรในขณะนี้ กรุณารอให้ปฏิทินโหลดเสร็จก่อนครับ");
+        return;
+    }
 
-        // --- ส่วนหัวใจสำคัญ: จัดกลุ่มข้อมูลตามชื่อคน ---
-        const summary = {};
-        
-        // วนลูปข้อมูลจาก fullData ที่เรา fetch มาแล้ว
-        Object.keys(fullData).forEach(day => {
-            fullData[day].forEach(item => {
-                // ใช้ชื่อ + หน้าที่ เป็นตัวแยก (ป้องกันคนชื่อซ้ำแต่คนละหน้าที่)
-                const key = `${item.rank_name}-${item.role}`;
-                if (!summary[key]) {
-                    summary[key] = { name: item.rank_name, role: item.role, days: [] };
-                }
-                summary[key].days.push(parseInt(day));
-            });
+    const body = document.getElementById('printTableBody');
+    if (!body) {
+        alert("หาตารางพิมพ์ไม่เจอ (ID: printTableBody หาย) กรุณาเช็คโค้ด HTML ครับ");
+        return;
+    }
+
+    body.innerHTML = '';
+    const summary = {};
+    
+    Object.keys(fullData).forEach(day => {
+        fullData[day].forEach(item => {
+            const key = `${item.rank_name}-${item.role}`;
+            if (!summary[key]) {
+                summary[key] = { name: item.rank_name, role: item.role, days: [] };
+            }
+            summary[key].days.push(parseInt(day));
         });
+    });
+
+    Object.values(summary).forEach(person => {
+        const row = `<tr>
+            <td>${person.name}</td>
+            <td>${person.role}</td>
+            <td>${person.days.sort((a,b) => a-b).join(', ')}</td>
+        </tr>`;
+        body.innerHTML += row;
+    });
+
+    console.log("เตรียมตารางเสร็จแล้ว กำลังเปิดหน้าต่างพิมพ์...");
+    window.print();
+}
 
         // สร้างแถวตารางจากข้อมูลที่สรุปแล้ว
         // เรียงลำดับคนตามหน้าที่ (นายทหารเวรขึ้นก่อน)
@@ -311,7 +326,7 @@
 
         // เมื่อเตรียมตารางเสร็จแล้ว สั่งพิมพ์ทันที
         window.print();
-    }
+    
 
     // 3. ฟังก์ชันอื่นๆ (คงเดิม)
     function openModal(day) { /* โค้ดเดิมของเพื่อน */ }
