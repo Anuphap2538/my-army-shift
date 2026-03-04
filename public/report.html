@@ -271,12 +271,13 @@
         const summary = {};
         Object.keys(fullData).forEach(day => {
     fullData[day].forEach(item => {
-        // เช็คแบบละเอียด: ต้องเป็นเวรวิทยุ และ shift_turn ต้องไม่ว่าง
+        // --- 🎯 ล็อคเป้า: เฉพาะ "เวรวิทยุ" เท่านั้นที่จะมีวงเล็บผลัด ---
         let roleDisplay = item.role;
-        if (item.role === "เวรวิทยุ" && item.shift_turn && item.shift_turn.trim() !== "") {
+        if (item.role === "เวรวิทยุ" && item.shift_turn) {
             roleDisplay = `${item.role} (${item.shift_turn})`;
         }
-        
+        // ถ้าไม่ใช่ "เวรวิทยุ" roleDisplay จะเป็นแค่ item.role เสมอ (ไม่มีวงเล็บ)
+
         const key = `${item.rank_name}-${roleDisplay}`;
         if (!summary[key]) {
             summary[key] = { name: item.rank_name, role: roleDisplay, days: [] };
@@ -287,12 +288,12 @@
 
 // --- แก้ไขในฟังก์ชัน openModal (หน้า PopUp) ---
 body.innerHTML = sortedEntries.map(d => {
-    // ใช้เงื่อนไขเดียวกันเป๊ะ เพื่อให้ผลออกมาเหมือนกัน
+    // --- 🎯 ล็อคเป้า: เฉพาะ "เวรวิทยุ" เท่านั้นที่จะมีวงเล็บผลัด ---
     let roleDisplay = d.role;
-    if (d.role === "เวรวิทยุ" && d.shift_turn && d.shift_turn.trim() !== "") {
+    if (d.role === "เวรวิทยุ" && d.shift_turn) {
         roleDisplay = `${d.role} (${d.shift_turn})`;
     }
-    
+
     return `
     <div class="duty-item">
         <div><b>${d.rank_name}</b><br><small>${roleDisplay}</small></div>
