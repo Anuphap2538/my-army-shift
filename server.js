@@ -554,7 +554,8 @@ app.post('/sync-existing-shifts', async (req, res) => {
 });
 
 // 6. Start Server (แก้ Port ให้รองรับ Render)
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const PORT = process.env.PORT || 3000; 
+
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 ระบบพร้อมใช้งานบน Port: ${PORT}`);
 });
