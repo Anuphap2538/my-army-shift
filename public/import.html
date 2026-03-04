@@ -7,134 +7,56 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --primary: #3b82f6;
-            --primary-dark: #1e40af;
-            --success: #10b981;
-            --glass: rgba(255, 255, 255, 0.4); /* ความใสที่เพื่อนต้องการ */
-        }
-
-        /* --- 🌟 ส่วนพื้นหลังที่ทำให้เหมือนหน้า Report --- */
+        :root { --primary: #3b82f6; --primary-dark: #1e40af; --success: #10b981; --glass: rgba(255, 255, 255, 0.4); }
         body {
-            font-family: 'Sarabun', sans-serif;
-            margin: 0; padding: 20px; min-height: 100vh;
-            background-image: linear-gradient(rgba(241, 245, 249, 0.3), rgba(241, 245, 249, 0.3)), 
-                              url('images/pa.jpg');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            position: relative;
+            font-family: 'Sarabun', sans-serif; margin: 0; padding: 20px; min-height: 100vh;
+            background-image: linear-gradient(rgba(241, 245, 249, 0.3), rgba(241, 245, 249, 0.3)), url('images/pa.jpg');
+            background-size: cover; background-position: center; background-attachment: fixed; position: relative;
         }
-
-        body::before {
-            content: "";
-            position: fixed; inset: 0;
-            background: inherit;
-            filter: blur(5px);
-            z-index: -1;
-        }
-
-        /* --- 🌟 ส่วนโครงสร้างหน้าจอ (Layout เดิม) --- */
+        body::before { content: ""; position: fixed; inset: 0; background: inherit; filter: blur(5px); z-index: -1; }
         .container {
-            max-width: 800px;
-            margin: 40px auto;
-            background: var(--glass);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 25px;
-            padding: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            max-width: 600px; margin: 60px auto; background: var(--glass); backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px); border-radius: 25px; padding: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.3); box-shadow: 0 15px 35px rgba(0,0,0,0.1);
         }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            color: var(--primary-dark);
-            margin: 0;
-            font-size: 28px;
-        }
-
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: var(--primary-dark); font-size: 24px; margin: 10px 0; }
         .upload-area {
-            border: 3px dashed var(--primary);
-            border-radius: 20px;
-            padding: 40px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.5);
-            transition: 0.3s;
-            cursor: pointer;
+            border: 3px dashed var(--primary); border-radius: 20px; padding: 30px;
+            text-align: center; background: rgba(255, 255, 255, 0.6); cursor: pointer; transition: 0.3s;
         }
-
-        .upload-area:hover {
-            background: rgba(255, 255, 255, 0.8);
-            border-color: var(--primary-dark);
-        }
-
-        .upload-area i {
-            font-size: 50px;
-            color: var(--primary);
-            margin-bottom: 15px;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 15px;
-            margin-top: 25px;
-            justify-content: center;
-        }
-
+        .upload-area:hover { background: rgba(255, 255, 255, 0.9); border-color: var(--primary-dark); }
+        .upload-area i { font-size: 45px; color: var(--primary); margin-bottom: 10px; }
+        .btn-group { display: flex; gap: 15px; margin-top: 25px; justify-content: center; }
         .btn {
-            padding: 12px 25px;
-            border-radius: 12px;
-            border: none;
-            font-weight: 700;
-            cursor: pointer;
-            transition: 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
+            padding: 12px 25px; border-radius: 12px; border: none; font-weight: 700;
+            cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 10px;
         }
-
         .btn-primary { background: var(--primary); color: white; }
-        .btn-back { background: #64748b; color: white; text-decoration: none; font-size: 14px; }
-        
-        .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
-
-        #fileInfo {
-            margin-top: 15px;
-            font-weight: 600;
-            color: var(--primary-dark);
-        }
+        .btn-back { background: #64748b; color: white; text-decoration: none; }
+        #fileInfo { margin-top: 15px; font-weight: 600; color: #059669; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <img src="images/air.png" alt="Logo" style="width: 80px; margin-bottom: 15px;">
-        <h1>นำเข้าข้อมูลเวรรายเดือน</h1>
-        <p>อัปโหลดไฟล์ Excel เพื่ออัปเดตตารางเวรเข้าสู่ระบบ</p>
+        <img src="images/air.png" alt="Logo" style="width: 70px;">
+        <h1>นำเข้าข้อมูลเวร</h1>
+        <p>อัปโหลดไฟล์ Excel (.xlsx) เพื่อเข้า TiDB</p>
     </div>
 
-    <form action="/upload-excel" method="POST" enctype="multipart/form-data" id="uploadForm">
+    <form action="/upload-excel" method="POST" enctype="multipart/form-data">
         <div class="upload-area" onclick="document.getElementById('excelFile').click()">
             <i class="fas fa-file-excel"></i>
-            <h3>คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</h3>
-            <p>รองรับไฟล์ .xlsx และ .xls</p>
+            <p id="promptText">คลิกเพื่อเลือกไฟล์ Excel</p>
             <input type="file" id="excelFile" name="excelFile" hidden accept=".xlsx, .xls" onchange="showFileName()">
             <div id="fileInfo"></div>
         </div>
 
         <div class="btn-group">
-            <a href="/" class="btn btn-back">
-                <i class="fas fa-arrow-left"></i> กลับหน้าหลัก
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-cloud-upload-alt"></i> เริ่มนำเข้าข้อมูล
-            </button>
+            <a href="/" class="btn btn-back"><i class="fas fa-home"></i> หน้าหลัก</a>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-upload"></i> บันทึกลง TiDB</button>
         </div>
     </form>
 </div>
@@ -143,10 +65,10 @@
     function showFileName() {
         const file = document.getElementById('excelFile').files[0];
         if (file) {
-            document.getElementById('fileInfo').innerHTML = `ไฟล์ที่เลือก: <span style="color: #10b981;">${file.name}</span>`;
+            document.getElementById('promptText').style.display = 'none';
+            document.getElementById('fileInfo').innerText = `✅ พร้อมอัปโหลด: ${file.name}`;
         }
     }
 </script>
-
 </body>
 </html>
