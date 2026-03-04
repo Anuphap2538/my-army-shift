@@ -254,24 +254,24 @@
     </div>
 <script>
 function copyInviteLink() {
-    // สร้างลิงก์อัตโนมัติจาก URL ที่ Render ให้อยู่แล้ว
-    const inviteUrl = window.location.origin + "/login-redirect";
+    // 🚩 แก้จาก /login-redirect เป็น /google/auth
+    const inviteUrl = window.location.origin + "/google/auth";
     
     navigator.clipboard.writeText(inviteUrl).then(() => {
         const copyText = document.getElementById('copyText');
         const btn = document.getElementById('btnCopy');
         
-        // แสดงสถานะว่าก๊อปสำเร็จ
         const originalText = copyText.innerText;
         copyText.innerText = "✅ ก๊อปปี้สำเร็จ!";
-        btn.style.color = "#f1c40f"; // เปลี่ยนเป็นสีเหลืองทองชั่วคราว
+        btn.style.color = "#f1c40f"; 
         
         setTimeout(() => {
             copyText.innerText = originalText;
-            btn.style.color = "#2ecc71"; // กลับเป็นสีเขียว
+            btn.style.color = "#2ecc71"; 
         }, 3000);
     }).catch(err => {
-        alert("ก๊อปปี้ลิงก์ไม่ได้: " + window.location.origin + "/login-redirect");
+        // กรณี Browser ไม่รองรับ clipboard API
+        alert("ก๊อปปี้ลิงก์นี้ส่งให้ทหาร: " + window.location.origin + "/google/auth");
     });
 }
 </script>

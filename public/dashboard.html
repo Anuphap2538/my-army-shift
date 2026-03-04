@@ -132,33 +132,42 @@
     const holidays = { "2026-03-03": "วันมาฆบูชา", "2026-03-04": "วันหยุดชดเชยมาฆบูชา" };
 
     async function init() {
-        try {
-            // ดึง Profile จาก Session หลังบ้าน
-            const res = await fetch('/api/my-profile');
-            if (res.status === 401) {
-                window.location.href = '/google/auth'; 
-                return;
-            }
-            const userData = await res.json(); 
-            currentUserName = userData.rank_name; 
-            
-            // นำชื่อมาแสดงที่หัวการ์ด
-            document.getElementById('userNameDisplay').innerText = currentUserName;
+    try {
+        // 1. เช็ค Profile
+        const res = await fetch('/api/my-profile');
+        if (res.status === 401) {
+            window.location.href = '/google/auth'; 
+            return;
+        }
+        const userData = await res.json(); 
+        currentUserName = userData.rank_name; 
+        document.getElementById('userNameDisplay').innerText = currentUserName;
 
-            // ดึงรายการเวร
-            const sRes = await fetch('/get-my-duty');
-            const myShifts = await sRes.json();
-            
-            scheduleData = {};
-            myShifts.forEach(s => {
-                const dateStr = s.shift_date.split('T')[0];
-                if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
-                scheduleData[dateStr].push({ name: currentUserName, role: s.role_type });
+        // 2. ⚡ แก้ตรงนี้: ดึงเวร "ทั้งหมด" ของเดือนนี้มาแสดง (เพื่อให้เห็นคู่เวร)
+        // ส่ง Query string ไปด้วยเพื่อให้ Backend รู้ว่าเอาเดือนไหน
+        const sRes = await fetch(`/get-report-calendar?month=${MONTH + 1}&year=${YEAR}&group=กองพัน`); 
+        // หมายเหตุ: ตรง group มึงอาจจะต้องทำปุ่มให้เลือก หรือดึงจาก User Profile
+        
+        const allShifts = await sRes.json();
+        
+        scheduleData = {};
+        allShifts.forEach(s => {
+            const dateStr = s.shift_date.split('T')[0];
+            if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
+            // เก็บข้อมูลทหารทุกคนในวันนั้นๆ
+            scheduleData[dateStr].push({ 
+                name: s.rank_name, 
+                role: s.role_type || s.role // เช็คชื่อ Property จาก SQL มึงด้วยนะ
             });
+        });
 
-            renderCalendar();
-        } catch(e) { console.error("Init Error:", e); }
+        renderCalendar();
+    } catch(e) { 
+        console.error("Init Error:", e);
+        // ถ้า Error อาจจะเพราะยังไม่ได้ Login ให้เตะไปหน้า Auth
+        window.location.href = '/google/auth';
     }
+}
 
     function renderCalendar() {
         const grid = document.getElementById('calendarGrid');
