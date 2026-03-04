@@ -108,15 +108,6 @@
         .btn-del { color: #94a3b8; background: #f1f5f9; border: none; padding: 8px 12px; border-radius: 10px; cursor: pointer; transition: 0.2s; }
         .btn-del:hover { color: white; background: var(--danger); }
 
-        @media (max-width: 1024px) {
-            .top-navigation { align-items: center; text-align: center; }
-            .controls-wrapper { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-            #monthSelect, .btn-sync-google { grid-column: span 2; width: 100%; }
-            .brand-text h1 { font-size: 20px; }
-            .day-cell { min-height: 90px; }
-        }
-
-        /* --- ส่วนสำหรับการพิมพ์ --- */
         @media print {
             body { background: white !important; }
             .no-print, .top-navigation, .calendar-container, .modal { display: none !important; }
@@ -226,7 +217,6 @@
         try {
             const resCal = await fetch(`/get-report-calendar?month=${month}&year=${currentYear}&group=${group}`);
             const dataCal = await resCal.json();
-            
             fullData = {};
             dataCal.forEach(item => {
                 const d = new Date(item.shift_date).getDate();
@@ -238,19 +228,15 @@
             const daysInMonth = new Date(currentYear, month, 0).getDate();
             const body = document.getElementById('calendarBody');
             body.innerHTML = '';
-            
             for (let i = 0; i < firstDay; i++) body.innerHTML += `<div></div>`;
-            
             for (let d = 1; d <= daysInMonth; d++) {
                 let html = `<span class="date-number">${d}</span>`;
                 if(fullData[d]) {
-                    // --- 🌟 แก้จุดที่ 1: เรียงลำดับให้นายทหารเวรขึ้นก่อนในหน้าปฏิทิน ---
                     const sortedDayData = [...fullData[d]].sort((a, b) => {
                         if (a.role.includes("นายทหารเวร")) return -1;
                         if (b.role.includes("นายทหารเวร")) return 1;
                         return 0;
                     });
-
                     const boss = sortedDayData[0];
                     html += `<div class="badge-boss">⭐ ${boss.rank_name}</div>`;
                     if(fullData[d].length > 1) html += `<div class="badge-count">และอื่นๆ อีก ${fullData[d].length - 1} นาย</div>`;
@@ -263,57 +249,29 @@
     function prepareAndPrint() {
         const monthLabel = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
         document.getElementById('printSubTitle').innerText = `กลุ่มงาน: ${currentGroup} | ประจำเดือน ${monthLabel} 2569`;
-        
         const body = document.getElementById('printTableBody');
         if (!body) return;
         body.innerHTML = '';
-        
         const summary = {};
         Object.keys(fullData).forEach(day => {
-    fullData[day].forEach(item => {
-        // --- 🎯 ล็อคเป้า: เฉพาะ "เวรวิทยุ" เท่านั้นที่จะมีวงเล็บผลัด ---
-        let roleDisplay = item.role;
-        if (item.role === "เวรวิทยุ" && item.shift_turn) {
-            roleDisplay = `${item.role} (${item.shift_turn})`;
-        }
-        // ถ้าไม่ใช่ "เวรวิทยุ" roleDisplay จะเป็นแค่ item.role เสมอ (ไม่มีวงเล็บ)
-
-        const key = `${item.rank_name}-${roleDisplay}`;
-        if (!summary[key]) {
-            summary[key] = { name: item.rank_name, role: roleDisplay, days: [] };
-        }
-        summary[key].days.push(parseInt(day));
-    });
-});
-
-// --- แก้ไขในฟังก์ชัน openModal (หน้า PopUp) ---
-body.innerHTML = sortedEntries.map(d => {
-    // --- 🎯 ล็อคเป้า: เฉพาะ "เวรวิทยุ" เท่านั้นที่จะมีวงเล็บผลัด ---
-    let roleDisplay = d.role;
-    if (d.role === "เวรวิทยุ" && d.shift_turn) {
-        roleDisplay = `${d.role} (${d.shift_turn})`;
-    }
-
-    return `
-    <div class="duty-item">
-        <div><b>${d.rank_name}</b><br><small>${roleDisplay}</small></div>
-        <button class="btn-del" onclick="deleteEntry(${d.id}, '${d.rank_name}', ${day})">ลบ</button>
-    </div>`;
-}).join('');
-
-        // --- 🌟 แก้จุดที่ 3: เรียงลำดับให้นายทหารเวรขึ้นก่อนในหน้าพิมพ์ ---
+            fullData[day].forEach(item => {
+                let roleDisplay = item.role;
+                // ล็อคเป้า: เฉพาะ "เวรวิทยุ" เท่านั้นที่มีวงเล็บ
+                if (item.role === "เวรวิทยุ" && item.shift_turn) {
+                    roleDisplay = `${item.role} (${item.shift_turn})`;
+                }
+                const key = `${item.rank_name}-${roleDisplay}`;
+                if (!summary[key]) summary[key] = { name: item.rank_name, role: roleDisplay, days: [] };
+                summary[key].days.push(parseInt(day));
+            });
+        });
         const sortedPeople = Object.values(summary).sort((a, b) => {
             if (a.role.includes("นายทหารเวร")) return -1;
             if (b.role.includes("นายทหารเวร")) return 1;
             return 0;
         });
-
         sortedPeople.forEach(person => {
-            const row = `<tr>
-                <td>${person.name}</td>
-                <td>${person.role}</td>
-                <td>${person.days.sort((a, b) => a - b).join(', ')}</td>
-            </tr>`;
+            const row = `<tr><td>${person.name}</td><td>${person.role}</td><td>${person.days.sort((a, b) => a - b).join(', ')}</td></tr>`;
             body.innerHTML += row;
         });
         window.print();
@@ -323,35 +281,48 @@ body.innerHTML = sortedEntries.map(d => {
         const monthName = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
         document.getElementById('modalTitle').innerText = `วันที่ ${day} ${monthName}`;
         const body = document.getElementById('modalBody');
-        
         if (!fullData[day]) {
             body.innerHTML = '<p style="text-align:center; padding:30px;">ไม่มีข้อมูล</p>';
         } else {
-            // --- 🌟 แก้จุดที่ 4: เรียงลำดับใน PopUp ให้นายทหารเวรอยู่บนสุด ---
             const sortedEntries = [...fullData[day]].sort((a, b) => {
                 if (a.role.includes("นายทหารเวร")) return -1;
                 if (b.role.includes("นายทหารเวร")) return 1;
                 return 0;
             });
-
             body.innerHTML = sortedEntries.map(d => {
-                // แสดงผลัดใน PopUp ด้วย
-                const roleDisplay = d.shift_turn ? `${d.role} (${d.shift_turn})` : d.role;
-                return `
-                <div class="duty-item">
-                    <div><b>${d.rank_name}</b><br><small>${roleDisplay}</small></div>
-                    <button class="btn-del" onclick="deleteEntry(${d.id}, '${d.rank_name}', ${day})">ลบ</button>
-                </div>`;
+                let roleDisplay = d.role;
+                // ล็อคเป้า: เฉพาะ "เวรวิทยุ" เท่านั้นที่มีวงเล็บ
+                if (d.role === "เวรวิทยุ" && d.shift_turn) {
+                    roleDisplay = `${d.role} (${d.shift_turn})`;
+                }
+                return `<div class="duty-item"><div><b>${d.rank_name}</b><br><small>${roleDisplay}</small></div><button class="btn-del" onclick="deleteEntry(${d.id}, '${d.rank_name}', ${day})">ลบ</button></div>`;
             }).join('');
         }
         document.getElementById('dutyModal').style.display = 'flex';
     }
 
-    // ฟังก์ชันอื่นๆ (closeModal, deleteEntry, syncAllToGoogle) ให้คงเดิมตามโค้ดล่าสุด
+    async function syncAllToGoogle() {
+        const btn = document.getElementById('syncBtn');
+        const month = document.getElementById('monthSelect').value;
+        if(!confirm(`ซิงค์ข้อมูลใช่หรือไม่?`)) return;
+        btn.innerHTML = "⏳ กำลังซิงค์...";
+        try {
+            await fetch(`/sync-existing-shifts?month=${month}&year=2026&group=${currentGroup}`, { method: 'POST' });
+            alert("✅ ซิงค์สำเร็จ!");
+        } catch (err) { alert("Error"); }
+        finally { btn.innerHTML = "<i class='fab fa-google'></i> ซิงค์ Google Calendar"; }
+    }
+
+    async function deleteEntry(id, name, day) {
+        if (confirm(`ลบ ${name}?`)) {
+            const res = await fetch(`/delete-shift/${id}`, { method: 'DELETE' });
+            if (res.ok) { await renderReport(currentGroup); closeModal(); }
+        }
+    }
+
     function closeModal() { document.getElementById('dutyModal').style.display = 'none'; }
     window.onclick = (e) => { if(e.target == document.getElementById('dutyModal')) closeModal(); }
     renderReport('กองพัน');
 </script>
-    
 </body>
 </html>
