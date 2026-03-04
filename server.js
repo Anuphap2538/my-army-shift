@@ -48,9 +48,9 @@ async function testConnection() {
 testConnection();
 
 // 3. ตั้งค่า Google OAuth 
-// ⚠️ อย่าลืมเปลี่ยน http://localhost:3000 เป็น URL ของ Render เพื่อนนะ!
+// ✅ แก้ใหม่ให้ตรงกับ Google Console เป๊ะๆ
 const REDIRECT_URI = process.env.RENDER_EXTERNAL_URL 
-    ? `${process.env.RENDER_EXTERNAL_URL}/google/callback` 
+    ? `https://my-army-shift.onrender.com/login-redirect` 
     : 'http://localhost:3000/google/callback';
 
 const oauth2Client = new google.auth.OAuth2(
@@ -154,7 +154,7 @@ app.get('/google/auth', (req, res) => {
 });
 
 // ⚠️ จุดที่ต้องระวัง: Callback Route ของ Google
-app.get('/google/callback', async (req, res) => {
+app.get('/login-redirect', async (req, res) => {
     const code = req.query.code;
     try {
         const { tokens } = await oauth2Client.getToken(code);
