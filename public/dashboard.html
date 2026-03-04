@@ -132,43 +132,43 @@
     const holidays = { "2026-03-03": "วันมาฆบูชา", "2026-03-04": "วันหยุดชดเชยมาฆบูชา" };
 
     async function init() {
-        try {
-            // 1. ดึง Profile
-            const res = await fetch('/api/my-profile');
-            if (res.status === 401) {
-                window.location.href = '/google/auth'; 
-                return;
-            }
-            const userData = await res.json(); 
-            currentUserName = userData.rank_name; 
-            document.getElementById('userNameDisplay').innerText = currentUserName;
+        try {
+            // 1. ดึง Profile
+            const res = await fetch('/api/my-profile');
+            if (res.status === 401) {
+                window.location.href = '/google/auth'; 
+                return;
+            }
+            const userData = await res.json(); 
+            currentUserName = userData.rank_name; 
+            document.getElementById('userNameDisplay').innerText = currentUserName;
 
-            // 2. ดึงรายการเวร
-            const sRes = await fetch('/get-my-duty');
-            const myShifts = await sRes.json();
-            
-            // --- เริ่มต้นส่วนที่มึงถาม (วางทับตรงนี้) ---
-            scheduleData = {};
-            myShifts.forEach(s => {
-                // แปลงวันที่ให้เป็นฟอร์แมต YYYY-MM-DD ให้แม่นยำ
-                const d = new Date(s.shift_date);
-                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                
-                if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
-                
-                // เก็บข้อมูลเข้า scheduleData โดยใช้ชื่อจาก Profile
-                scheduleData[dateStr].push({ 
-                    name: currentUserName, 
-                    role: s.role_type 
-             });
-            });
-            // --- สิ้นสุดส่วนที่วางทับ ---
+            // 2. ดึงรายการเวร
+            const sRes = await fetch('/get-my-duty');
+            const myShifts = await sRes.json();
+            
+            // --- เริ่มต้นส่วนที่มึงถาม (วางทับตรงนี้) ---
+            scheduleData = {};
+            myShifts.forEach(s => {
+                // แปลงวันที่ให้เป็นฟอร์แมต YYYY-MM-DD ให้แม่นยำ
+                const d = new Date(s.shift_date);
+                const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                
+                if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
+                
+                // เก็บข้อมูลเข้า scheduleData โดยใช้ชื่อจาก Profile
+                scheduleData[dateStr].push({ 
+                    name: s.rank_name, 
+                    role: s.role_type 
+                });
+            });
+            // --- สิ้นสุดส่วนที่วางทับ ---
 
-            renderCalendar();
-        } catch(e) { 
-            console.error("Init Error:", e); 
-        }
-    }
+            renderCalendar();
+        } catch(e) { 
+            console.error("Init Error:", e); 
+        }
+    }
 
     function renderCalendar() {
         const grid = document.getElementById('calendarGrid');
