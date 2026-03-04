@@ -107,6 +107,27 @@
         .duty-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #f1f5f9; }
         .btn-del { color: #94a3b8; background: #f1f5f9; border: none; padding: 8px 12px; border-radius: 10px; cursor: pointer; transition: 0.2s; }
         .btn-del:hover { color: white; background: var(--danger); }
+        
+        /* ✅ แก้ไขปฏิทินหลุดเฟรมสำหรับหน้าจอคอมพิวเตอร์ */
+        @media (min-width: 1025px) {
+            .calendar-container {
+                max-width: 1100px; /* กำหนดความกว้างสูงสุดไม่ให้หลุดเฟรม */
+                margin: 0 auto;    /* จัดให้อยู่กึ่งกลางหน้าจอ */
+            }
+            
+            .top-navigation {
+                max-width: 1100px; /* ปรับแถบเมนูด้านบนให้กว้างเท่ากับปฏิทิน */
+                margin: 0 auto 20px auto;
+            }
+
+            .calendar-grid {
+                gap: 15px; /* เพิ่มช่องว่างระหว่างวันให้ดูสบายตาขึ้นในจอใหญ่ */
+            }
+
+            .day-cell {
+                min-height: 130px; /* เพิ่มความสูงของช่องวันให้สมดุลกับความกว้าง */
+            }
+        }  
 
         @media print {
             body { background: white !important; }
