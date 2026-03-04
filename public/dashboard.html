@@ -133,12 +133,17 @@
 
     async function init() {
     try {
+        // 1. ดึง Profile
         const res = await fetch('/api/my-profile');
-        if (res.status === 401) { window.location.href = '/google/auth'; return; }
+        if (res.status === 401) { 
+            window.location.href = '/google/auth'; 
+            return; 
+        }
         const userData = await res.json(); 
         currentUserName = userData.rank_name; 
         document.getElementById('userNameDisplay').innerText = currentUserName;
 
+        // 2. ดึงข้อมูลเวร
         const sRes = await fetch('/get-my-duty');
         const myShifts = await sRes.json();
         
@@ -147,8 +152,9 @@
         if (myShifts && Array.isArray(myShifts)) {
             myShifts.forEach(s => {
                 const d = new Date(s.shift_date);
-                // แก้ตรงนี้: ตัด String().padStart ออก เพื่อให้เป็นเลขโดด (3 ไม่ใช่ 03)
-                // ให้ตรงกับที่ฟังก์ชัน renderCalendar ใช้หาข้อมูล
+                
+                // แก้ตรงนี้!!! ห้ามใส่ padStart(2, '0') 
+                // ต้องเป็น 2026-3-5 เท่านั้น ปฏิทินถึงจะระบายสี
                 const dateStr = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
                 
                 if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
@@ -160,6 +166,7 @@
             });
         }
 
+        // 3. วาดปฏิทิน
         renderCalendar();
 
     } catch(e) { 
