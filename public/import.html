@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --primary: #3b82f6; --primary-dark: #1e40af; --success: #10b981; --glass: rgba(255, 255, 255, 0.4); }
+        :root { --primary: #3b82f6; --primary-dark: #1e40af; --glass: rgba(255, 255, 255, 0.4); }
         body {
             font-family: 'Sarabun', sans-serif; margin: 0; padding: 20px; min-height: 100vh;
             background-image: linear-gradient(rgba(241, 245, 249, 0.3), rgba(241, 245, 249, 0.3)), url('images/pa.jpg');
@@ -50,7 +50,9 @@
         <div class="upload-area" onclick="document.getElementById('excelFile').click()">
             <i class="fas fa-file-excel"></i>
             <p id="promptText">คลิกเพื่อเลือกไฟล์ Excel</p>
-            <input type="file" id="excelFile" name="excelFile" hidden accept=".xlsx, .xls" onchange="showFileName()">
+            
+            <input type="file" id="excelFile" name="file" hidden accept=".xlsx, .xls" onchange="showFileName()">
+            
             <div id="fileInfo"></div>
         </div>
 
@@ -66,7 +68,7 @@
         const file = document.getElementById('excelFile').files[0];
         if (file) {
             document.getElementById('promptText').style.display = 'none';
-            document.getElementById('fileInfo').innerText = `✅ พร้อมอัปโหลด: ${file.name}`;
+            document.getElementById('fileInfo').innerText = `✅ เลือกแล้ว: ${file.name}`;
         }
     }
 </script>
