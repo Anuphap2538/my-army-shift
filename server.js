@@ -153,42 +153,6 @@ app.get('/google/auth', (req, res) => {
     res.redirect(url);
 });
 
-// ⚠️ จุดที่ต้องระวัง: Callback Route ของ Google
-app.get('/login-redirect', async (req, res) => {
-    const code = req.query.code;
-    try {
-        const { tokens } = await oauth2Client.getToken(code);
-        oauth2Client.setCredentials(tokens);
-
-        // ดึง Email จาก Google (สมมติว่าเพื่อนมี Logic นี้อยู่แล้ว)
-        const ticket = await oauth2Client.verifyIdToken({
-            idToken: tokens.id_token,
-            audience: '1055278075819-3degsqjsed1f3o8k35doqot6f45ih9re.apps.googleusercontent.com'
-        });
-        const payload = ticket.getPayload();
-        const email = payload.email;
-
-        const connection = await getConnection();
-        const [rows] = await connection.execute('SELECT id, rank_name FROM users WHERE email = ?', [email]);
-        
-        if (rows.length > 0) {
-            req.session.userId = rows[0].id;
-            req.session.userName = rows[0].rank_name;
-            req.session.userEmail = email;
-            // บันทึก Token ลง DB (ถ้าต้องการ)
-            await connection.execute('UPDATE users SET google_token = ? WHERE email = ?', [JSON.stringify(tokens), email]);
-            await connection.end();
-            res.redirect('/dashboard.html'); 
-        } else {
-            await connection.end();
-            res.send("ไม่พบอีเมลนี้ในระบบฐานข้อมูลเวร กรุณาติดต่อแอดมิน");
-        }
-    } catch (err) {
-        console.error("❌ Google Callback Error:", err);
-        res.status(500).send("Login Failed");
-    }
-});
-
 // --- 5. API ต่างๆ (ใช้ getConnection ที่สร้างใหม่) ---
 app.post('/sync-existing-shifts', async (req, res) => {
 // ... โค้ดที่เหลือของเพื่อนด้านล่างยาวไปถึง 400 บรรทัด ...
@@ -473,21 +437,6 @@ async function sendToGoogleCalendar(auth, shiftData, allShifts) {
     });
 }
 
-// --- 🌟 ทางลัดสำหรับทหารที่คลิกมาจากปฏิทิน 🌟 ---
-app.get('/login-redirect', (req, res) => {
-    const url = oauth2Client.generateAuthUrl({
-        access_type: 'offline',
-        prompt: 'consent',
-        // ขอ scope เพื่อเอา email มาเช็คในฐานข้อมูล
-        scope: [
-            'https://www.googleapis.com/auth/calendar.events',
-            'https://www.googleapis.com/auth/userinfo.email',
-            'openid'
-        ]
-    });
-    res.redirect(url);
-});
-
 app.post('/sync-existing-shifts', async (req, res) => {
     const { month, year, group } = req.query;
     try {
@@ -550,6 +499,55 @@ app.post('/sync-existing-shifts', async (req, res) => {
     } catch (err) {
         console.error("❌ Sync Error:", err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// --- 🌟 ทางลัดสำหรับทหารทุกคน (Login เพื่อมอบกุญแจ) 🌟 ---
+app.get('/login-redirect', (req, res) => {
+    const url = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        prompt: 'consent',
+        scope: [
+            'https://www.googleapis.com/auth/calendar.events',
+            'https://www.googleapis.com/auth/userinfo.email', // 👈 เพิ่มอันนี้
+            'openid' // 👈 และอันนี้
+        ]
+    });
+    res.redirect(url);
+});
+
+// 2.Callback เช็ค Token และหา Email
+app.get('/google/callback', async (req, res) => { // หรือถ้ามึงเปลี่ยนชื่อเป็น /login-redirect แล้วก็ใช้ชื่อนั้น
+    const code = req.query.code;
+    try {
+        const { tokens } = await oauth2Client.getToken(code);
+        oauth2Client.setCredentials(tokens);
+
+        // ดึง Email มาจาก Google เพื่อดูว่าเป็นใครในระบบ
+        const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+        const userInfo = await oauth2.userinfo.get();
+        const email = userInfo.data.email;
+
+        const connection = await getConnection();
+        const [rows] = await connection.execute('SELECT id, rank_name FROM users WHERE email = ?', [email]);
+        
+        if (rows.length > 0) {
+            req.session.userId = rows[0].id;
+            req.session.userName = rows[0].rank_name;
+            req.session.userEmail = email;
+            
+            // เก็บ Token ไว้ให้ระบบใช้ส่ง Calendar 07:00 น.
+            await connection.execute('UPDATE users SET google_token = ? WHERE email = ?', [JSON.stringify(tokens), email]);
+            await connection.end();
+            
+            res.redirect('/dashboard.html'); 
+        } else {
+            await connection.end();
+            res.send(`❌ ไม่พบอีเมล ${email} ในระบบ! กรุณาแจ้ง Admin ให้เพิ่มเมลนี้ก่อนครับ`);
+        }
+    } catch (err) {
+        console.error("❌ Google Callback Error:", err);
+        res.status(500).send("Login Failed: " + err.message);
     }
 });
 
