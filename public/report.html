@@ -270,15 +270,35 @@
         
         const summary = {};
         Object.keys(fullData).forEach(day => {
-            fullData[day].forEach(item => {
-                // --- 🌟 แก้จุดที่ 2: แสดงตำแหน่ง + ผลัด (ถ้ามี) ---
-                const roleWithShift = item.shift_turn ? `${item.role} (${item.shift_turn})` : item.role;
-                const key = `${item.rank_name}-${roleWithShift}`;
-                
-                if (!summary[key]) summary[key] = { name: item.rank_name, role: roleWithShift, days: [] };
-                summary[key].days.push(parseInt(day));
-            });
-        });
+    fullData[day].forEach(item => {
+        // เช็คว่าถ้าหน้าที่คือ "เวรวิทยุ" ให้เติมผลัดเข้าไป แต่ถ้าไม่ใช่ให้โชว์แค่ชื่อหน้าที่
+        let roleDisplay = item.role;
+        if (item.role.includes("เวรวิทยุ") && item.shift_turn) {
+            roleDisplay = `${item.role} (${item.shift_turn})`;
+        }
+        
+        const key = `${item.rank_name}-${roleDisplay}`;
+        if (!summary[key]) {
+            summary[key] = { name: item.rank_name, role: roleDisplay, days: [] };
+        }
+        summary[key].days.push(parseInt(day));
+    });
+});
+
+// --- แก้ไขในฟังก์ชัน openModal (หน้า PopUp) ---
+body.innerHTML = sortedEntries.map(d => {
+    // เช็คเงื่อนไขเหมือนกัน: เฉพาะเวรวิทยุที่จะโชว์ผลัด
+    let roleDisplay = d.role;
+    if (d.role.includes("เวรวิทยุ") && d.shift_turn) {
+        roleDisplay = `${d.role} (${d.shift_turn})`;
+    }
+    
+    return `
+    <div class="duty-item">
+        <div><b>${d.rank_name}</b><br><small>${roleDisplay}</small></div>
+        <button class="btn-del" onclick="deleteEntry(${d.id}, '${d.rank_name}', ${day})">ลบ</button>
+    </div>`;
+}).join('');
 
         // --- 🌟 แก้จุดที่ 3: เรียงลำดับให้นายทหารเวรขึ้นก่อนในหน้าพิมพ์ ---
         const sortedPeople = Object.values(summary).sort((a, b) => {
