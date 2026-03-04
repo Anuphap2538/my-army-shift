@@ -2,179 +2,151 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>ระบบนำเข้าข้อมูลกำลังพล | Cloud Database</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#4f46e5">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>นำเข้าข้อมูลเวร - กองพันทหารอากาศโยธิน</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-    :root {
-        --primary: #3b82f6;
-        --primary-dark: #1e40af;
-        --success: #10b981;
-        --danger: #ef4444;
-        /* ปรับให้ขาวจางๆ เห็นพื้นหลัง (0.4) */
-        --glass: rgba(255, 255, 255, 0.4); 
-        --border: rgba(255, 255, 255, 0.2);
-    }
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1e40af;
+            --success: #10b981;
+            --glass: rgba(255, 255, 255, 0.4); /* ความใสที่เพื่อนต้องการ */
+        }
 
-    body {
-        font-family: 'Sarabun', sans-serif;
-        margin: 0; padding: 20px; min-height: 100vh;
-        /* ดึงรูป pa.jpg มาใช้ และลดความเข้มสีทับหน้าลงเหลือ 0.3 */
-        background-image: linear-gradient(rgba(241, 245, 249, 0.3), rgba(241, 245, 249, 0.3)), 
-                          url('images/pa.jpg');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        position: relative;
-    }
+        /* --- 🌟 ส่วนพื้นหลังที่ทำให้เหมือนหน้า Report --- */
+        body {
+            font-family: 'Sarabun', sans-serif;
+            margin: 0; padding: 20px; min-height: 100vh;
+            background-image: linear-gradient(rgba(241, 245, 249, 0.3), rgba(241, 245, 249, 0.3)), 
+                              url('images/pa.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            position: relative;
+        }
 
-    /* ทำ Effect เบลอพื้นหลังให้ดูนุ่มนวล */
-    body::before {
-        content: "";
-        position: fixed; inset: 0;
-        background: inherit;
-        filter: blur(5px); /* ลดความเบลอลงเพื่อให้เห็นภาพชัดขึ้น */
-        z-index: -1;
-    }
+        body::before {
+            content: "";
+            position: fixed; inset: 0;
+            background: inherit;
+            filter: blur(5px);
+            z-index: -1;
+        }
 
-    /* ปรับแต่ง Container ให้เป็นกระจกใสๆ (Glassmorphism) */
-    .container {
-        max-width: 1000px; 
-        margin: 0 auto; 
-        background: var(--glass);
-        backdrop-filter: blur(10px); 
-        -webkit-backdrop-filter: blur(10px);
-        border-radius: 25px; 
-        padding: 30px;
-        border: 1px solid var(--border);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
+        /* --- 🌟 ส่วนโครงสร้างหน้าจอ (Layout เดิม) --- */
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 25px;
+            padding: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
 
-    /* ส่วนอื่นๆ เช่น Header ให้ปรับตามความสวยงาม */
-    .header {
-        background: var(--primary);
-        color: white;
-        padding: 20px;
-        border-radius: 15px;
-        margin-bottom: 25px;
-        text-align: center;
-    }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
 
-    /* ปรับตารางให้โปร่งแสงนิดๆ ด้วยจะสวยมาก */
-    table {
-        width: 100%;
-        background: rgba(255, 255, 255, 0.5);
-        border-radius: 10px;
-        overflow: hidden;
-    }
-</style>
+        .header h1 {
+            color: var(--primary-dark);
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .upload-area {
+            border: 3px dashed var(--primary);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.5);
+            transition: 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: var(--primary-dark);
+        }
+
+        .upload-area i {
+            font-size: 50px;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-back { background: #64748b; color: white; text-decoration: none; font-size: 14px; }
+        
+        .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+
+        #fileInfo {
+            margin-top: 15px;
+            font-weight: 600;
+            color: var(--primary-dark);
+        }
+    </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="icon-box">🎖️</div>
-    <h2>นำเข้าข้อมูลกำลังพล</h2>
-    <p style="color: #64748b; margin-bottom: 25px;">
-        อัปโหลดไฟล์ Excel หรือ CSV เพื่อบันทึกรายชื่อ <br>
-        <small>*หัวตารางต้องมี: <b>ยศ - ชื่อ, หน้าที่, email</b></small>
-    </p>
-
-    <div class="drop-zone" onclick="document.getElementById('fileInput').click()">
-        <span id="dropZoneText">📁 คลิกเพื่อเลือกไฟล์ Excel หรือ CSV</span>
-        <input type="file" id="fileInput" hidden accept=".xlsx, .xls, .csv">
+    <div class="header">
+        <img src="images/air.png" alt="Logo" style="width: 80px; margin-bottom: 15px;">
+        <h1>นำเข้าข้อมูลเวรรายเดือน</h1>
+        <p>อัปโหลดไฟล์ Excel เพื่ออัปเดตตารางเวรเข้าสู่ระบบ</p>
     </div>
 
-    <div id="status"></div>
+    <form action="/upload-excel" method="POST" enctype="multipart/form-data" id="uploadForm">
+        <div class="upload-area" onclick="document.getElementById('excelFile').click()">
+            <i class="fas fa-file-excel"></i>
+            <h3>คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</h3>
+            <p>รองรับไฟล์ .xlsx และ .xls</p>
+            <input type="file" id="excelFile" name="excelFile" hidden accept=".xlsx, .xls" onchange="showFileName()">
+            <div id="fileInfo"></div>
+        </div>
 
-    <button id="uploadBtn" class="btn-upload" onclick="processAndSend()" disabled>🚀 เริ่มนำเข้าข้อมูลขึ้น Cloud</button>
-
-    <a href="/manage.html" class="nav-link">ไปหน้าจัดการเวร →</a>
+        <div class="btn-group">
+            <a href="/" class="btn btn-back">
+                <i class="fas fa-arrow-left"></i> กลับหน้าหลัก
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-cloud-upload-alt"></i> เริ่มนำเข้าข้อมูล
+            </button>
+        </div>
+    </form>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-
 <script>
-    let preparedData = [];
-
-    // เมื่อเลือกไฟล์
-    document.getElementById('fileInput').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        document.getElementById('dropZoneText').innerText = "📄 เลือกไฟล์แล้ว: " + file.name;
-        const statusDiv = document.getElementById('status');
-        const btn = document.getElementById('uploadBtn');
-
-        if (file.name.endsWith('.csv')) {
-            // อ่านไฟล์ CSV
-            Papa.parse(file, {
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    preparedData = results.data;
-                    showReadyStatus(preparedData.length);
-                }
-            });
-        } else {
-            // อ่านไฟล์ Excel
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                preparedData = XLSX.utils.sheet_to_json(firstSheet);
-                showReadyStatus(preparedData.length);
-            };
-            reader.readAsArrayBuffer(file);
-        }
-    });
-
-    function showReadyStatus(count) {
-        const statusDiv = document.getElementById('status');
-        const btn = document.getElementById('uploadBtn');
-        statusDiv.innerHTML = `<span style="color: #059669;">✅ พบข้อมูล ${count} รายการ พร้อมนำเข้า</span>`;
-        btn.disabled = false;
-    }
-
-    // ส่งข้อมูลไปที่ server.js
-    async function processAndSend() {
-        const btn = document.getElementById('uploadBtn');
-        const statusDiv = document.getElementById('status');
-        
-        btn.innerText = "⏳ กำลังบันทึกลง Cloud...";
-        btn.disabled = true;
-
-        try {
-            // ส่งข้อมูลไปที่ API /import-users (ต้องตรงกับใน server.js)
-            const response = await fetch('/import-users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ users: preparedData })
-            });
-
-            const result = await response.text();
-
-            if (response.ok) {
-                statusDiv.innerHTML = `<span style="color: #2563eb;">🎉 ${result}</span>`;
-                btn.innerText = "เสร็จสมบูรณ์ ✅";
-                setTimeout(() => { location.reload(); }, 2000);
-            } else {
-                throw new Error(result);
-            }
-        } catch (err) {
-            statusDiv.innerHTML = `<span style="color: #ef4444;">❌ ผิดพลาด: ${err.message}</span>`;
-            btn.innerText = "ลองใหม่อีกครั้ง";
-            btn.disabled = false;
+    function showFileName() {
+        const file = document.getElementById('excelFile').files[0];
+        if (file) {
+            document.getElementById('fileInfo').innerHTML = `ไฟล์ที่เลือก: <span style="color: #10b981;">${file.name}</span>`;
         }
     }
-    
 </script>
 
 </body>
 </html>
-
-
-
