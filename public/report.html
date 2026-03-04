@@ -71,7 +71,22 @@
             font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; 
             transition: all 0.2s;
             display: flex; align-items: center; gap: 8px;
-        }
+            display: inline-flex;    /* ใช้ inline-flex เพื่อให้ปุ่มกว้างตามเนื้อหา */
+    white-space: nowrap;     /* ⛔ ห้ามตัวหนังสือตกลงมาบรรทัดใหม่ */
+    flex-shrink: 0;          /* ⛔ ห้ามบีบขนาดปุ่มจนตัวหนังสือแตก */
+    
+    padding: 10px 15px;      /* ลด Padding ซ้ายขวานิดหน่อยเพื่อให้มีพื้นที่เพิ่ม */
+    justify-content: center;
+    align-items: center;
+    .controls-wrapper {
+    display: flex;
+    flex-wrap: nowrap;       /* ถ้าพื้นที่พอให้เรียงยาว */
+    overflow-x: auto;        /* ถ้ามือถือจอแคบเกินไป ให้ใช้วิธีเลื่อนซ้าย-ขวาแทนการตกบรรทัด */
+    gap: 8px;
+    padding-bottom: 5px;     /* เผื่อพื้นที่ให้ Scroll bar นิดนึงบนมือถือ */
+}
+}
+        
         .btn-kongpan { background: var(--danger) !important; color: white; }
         .btn-spk { background: var(--primary-dark) !important; color: white; }
         .btn-sync-google { 
