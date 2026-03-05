@@ -143,6 +143,7 @@
         // 2. ดึงรายการเวร
         const sRes = await fetch('/get-my-duty');
         const myShifts = await sRes.json();
+        console.log("เช็คข้อมูลจากหลังบ้าน:", myShifts.filter(item => item.role_type.includes("วิทยุ")));
         
         scheduleData = {};
 
