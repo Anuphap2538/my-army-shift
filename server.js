@@ -219,6 +219,23 @@ app.get("/get-users", async (req, res) => {
   }
 });
 
+app.get("/debug/routes", (req, res) => {
+  res.json({
+    ok: true,
+    hasGetUsers: true,
+    time: new Date().toISOString(),
+  });
+});
+
+app.get("/debug/users-count", async (req, res) => {
+  try {
+    const [r] = await pool.execute("SELECT COUNT(*) as c FROM users");
+    res.json({ count: r[0].c });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* =========================
 API: SHIFTS LIST
 ========================= */
