@@ -222,6 +222,13 @@
             <i class="fas fa-print"></i> พิมพ์รายงาน
         </button>
         
+        <button id="syncTodayBtn" class="btn-nav btn-sync-google" onclick="syncToday()">
+  ซิงค์เวรวันนี้
+</button>
+
+<button id="syncBtn" class="btn-nav btn-sync-google" onclick="syncAllToGoogle()">
+  ซิงค์ Google Calendar
+</button>
         
            
     </div>
@@ -282,7 +289,7 @@
         document.getElementById("monthSelect").selectedIndex
       ].text;
 
-    const currentYear = new Date().getFullYear(); // ✅ ไม่ fix 2026
+    const currentYear = 2026;
     document.getElementById(
       "subtext"
     ).innerText = `กลุ่มงาน: ${group} | ประจำเดือน ${monthLabel} ${currentYear + 543}`;
@@ -382,10 +389,10 @@
     });
 
     const sortedPeople = Object.values(summary).sort((a, b) => {
-      if (getRole(a).includes("นายทหารเวร")) return -1;
-if (getRole(b).includes("นายทหารเวร")) return 1;
-      return 0;
-    });
+  if ((a.role || "").includes("นายทหารเวร")) return -1;
+  if ((b.role || "").includes("นายทหารเวร")) return 1;
+  return 0;
+});
   
     sortedPeople.forEach((p) => {
       body.innerHTML += `<tr>
