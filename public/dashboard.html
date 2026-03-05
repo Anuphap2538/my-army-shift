@@ -232,10 +232,10 @@ if (isMe) {
         document.getElementById('displayDate').innerText = `วันที่ ${day} มีนาคม 2569 ${holidayName ? '('+holidayName+')' : ''}`;
 
         const orderKongPan = ["นายทหารเวรกองพัน", "จ่าเวรร้อย สนน.", "จ่าเวรร้อย รก.", "จ่าเวรร้อย ทย.", "จ่าเวรร้อย ตอ.", "จ่าเวรหน่วยฝึกทหารใหม่", "จ่าเวร มว.สุนัขทหาร", "จ่าเวร ขส.", "จ่าเวรสูทกรรม"];
-        const orderSPK = ["นายทหารเวร ศปก.", "เวรวิทยุ ผลัด 1", "เวรวิทยุ ผลัด 2", "เวรวิทยุ ผลัด 3", "เวร สยย.", "เวร ชป.", "เวรสายตรวจสุนัขทหาร"];
+        const orderSPK = ["นายทหารเวร ศปก.", "เวรวิทยุ", "เวรวิทยุ ผลัด 1", "เวรวิทยุ ผลัด 2", "เวรวิทยุ ผลัด 3", "เวร สยย.", "เวร ชป.", "เวรสายตรวจสุนัขทหาร"];
 
         const amIKongPan = myDuties.some(d => orderKongPan.some(role => d.role.includes(role)));
-        const amISPK = myDuties.some(d => orderSPK.some(role => d.role.includes(role)));
+        const amISPK = myDuties.some(d => orderSPK.some(role => d.role.includes(role)) || d.role.includes("วิทยุ"));
 
         let showKP = true, showSPK = true;
         if (amIKongPan && !amISPK) showSPK = false; 
@@ -244,7 +244,11 @@ if (isMe) {
         let gridStyle = (showKP && showSPK) ? "grid-template-columns: 1fr 1fr;" : "grid-template-columns: 1fr;";
         let html = `<div style="display: grid; ${gridStyle} gap: 20px;">`;
         
-        const findDuty = (roleName) => duties.find(d => d.role.replace(/\s+/g, '').includes(roleName.replace(/\s+/g, '')));
+        // แก้ findDuty ให้ค้นหาได้กว้างขึ้น
+const findDuty = (roleName) => duties.find(d => 
+    d.role.replace(/\s+/g, '').includes(roleName.replace(/\s+/g, '')) || 
+    roleName.replace(/\s+/g, '').includes(d.role.replace(/\s+/g, ''))
+);
 
         if (showKP) {
             html += `<div><h4 style="color:#f1c40f; border-bottom:2px solid rgba(241, 196, 15, 0.3); margin: 0 0 15px 0; padding-bottom: 5px; font-size:1.1em;">🛡️ กองพัน</h4>`;
