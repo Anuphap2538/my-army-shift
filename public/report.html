@@ -52,16 +52,28 @@
         .brand-text p { margin: 2px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9); }
 
         .controls-wrapper { 
-            display: flex; flex-wrap: wrap; align-items: center; gap: 10px; 
-            border-top: 1px solid rgba(255,255,255,0.2);
-            padding-top: 15px; width: 100%;
-        }
+    display: flex; 
+    flex-wrap: wrap; 
+    align-items: center; 
+    gap: 12px; 
+    border-top: 1px solid rgba(255,255,255,0.2);
+    padding-top: 15px; 
+    width: 100%;
+    justify-content: flex-end; 
+}
 
         #monthSelect {
-            padding: 10px 15px; width: 150px; border-radius: 12px; border: none;
-            font-family: inherit; font-weight: 700; font-size: 16px; cursor: pointer; color: var(--primary-dark);
-            background: white;
-        }
+    padding: 12px 18px;
+    width: 180px;   /* ⭐ ขยายช่องเลือกเดือน */
+    border-radius: 12px;
+    border: none;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    color: var(--primary-dark);
+    background: white;
+}
   
         .btn-nav {
             padding: 10px 18px; border-radius: 12px; border: none;
@@ -181,6 +193,76 @@
     max-width: 100%;
     height: auto;
 }
+
+/* ===== Top Controls Layout (Left month | Right buttons) ===== */
+.controls-wrapper{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  width:100%;
+  flex-wrap:wrap; /* จอเล็กให้ลงบรรทัด */
+}
+
+/* ฝั่งซ้าย: เดือน */
+.left-controls{
+  flex: 0 0 auto;
+}
+
+/* ขยาย select เดือน */
+#monthSelect{
+  padding:12px 18px;
+  width:190px;              /* ✅ ขยายตามที่ขอ */
+  border-radius:14px;
+  border:none;
+  font-family:inherit;
+  font-weight:800;
+  font-size:16px;
+  cursor:pointer;
+  color:var(--primary-dark);
+  background:#fff;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.10);
+}
+
+/* เส้นแบ่งกลาง */
+.divider{
+  width:1px;
+  height:34px;
+  background:rgba(255,255,255,0.45);
+  flex:0 0 auto;
+}
+
+/* ฝั่งขวา: ปุ่ม */
+.right-controls{
+  display:flex;
+  gap:12px;
+  margin-left:auto;         /* ✅ ดันไปขวาสุด */
+  align-items:center;
+  flex-wrap:wrap;           /* ✅ จอเล็กปุ่มลงบรรทัดเอง */
+  justify-content:flex-end;
+}
+
+/* ให้ปุ่มดูเป็นชุดเดียวกันมากขึ้น */
+.btn-nav{
+  padding:11px 18px;
+  border-radius:14px;
+  font-weight:800;
+  font-size:14px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+}
+
+/* ===== Active state (กดแล้วติด) ===== */
+.btn-nav.is-active{
+  outline: 3px solid rgba(255,255,255,0.45);
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+/* ===== Responsive: จอเล็กให้ divider หาย และจัดเป็นแถว ===== */
+@media (max-width: 640px){
+  #monthSelect{ width: 100%; }
+  .divider{ display:none; }
+  .right-controls{ margin-left:0; width:100%; justify-content:flex-start; }
+}
     </style>
 </head>
 <body>
@@ -195,39 +277,44 @@
     </div>
 
     <div class="controls-wrapper">
-        <select id="monthSelect" onchange="renderReport(currentGroup)">
-            <option value="1">มกราคม</option>
-            <option value="2">กุมภาพันธ์</option>
-            <option value="3" selected>มีนาคม</option>
-            <option value="4">เมษายน</option>
-            <option value="5">พฤษภาคม</option>
-            <option value="6">มิถุนายน</option>
-            <option value="7">กรกฏาคม</option>
-            <option value="8">สิงหาคม</option>
-            <option value="9">กันยายน</option>
-            <option value="10">ตุลาคม</option>
-            <option value="11">พฤศจิกายน</option>
-            <option value="12">ธันวาคม</option>
-        </select>
 
-        <button class="btn-nav btn-kongpan" onclick="renderReport('กองพัน')">
-            <i class="fas fa-users"></i> เวรกองพัน
-        </button>
-        
-        <button class="btn-nav btn-spk" onclick="renderReport('ศปก.')">
-            <i class="fas fa-shield-alt"></i> เวร ศปก.
-        </button>
-        
-        <button class="btn-nav btn-print" onclick="prepareAndPrint()">
-            <i class="fas fa-print"></i> พิมพ์รายงาน
-        </button>
-        
-<button id="syncBtn" class="btn-nav btn-sync-google" onclick="syncAllToGoogle()">
-  ซิงค์ Google Calendar
-</button>
-        
-           
-    </div>
+  <div class="left-controls">
+    <select id="monthSelect" onchange="renderReport(currentGroup)">
+      <option value="1">มกราคม</option>
+      <option value="2">กุมภาพันธ์</option>
+      <option value="3" selected>มีนาคม</option>
+      <option value="4">เมษายน</option>
+      <option value="5">พฤษภาคม</option>
+      <option value="6">มิถุนายน</option>
+      <option value="7">กรกฎาคม</option>
+      <option value="8">สิงหาคม</option>
+      <option value="9">กันยายน</option>
+      <option value="10">ตุลาคม</option>
+      <option value="11">พฤศจิกายน</option>
+      <option value="12">ธันวาคม</option>
+    </select>
+  </div>
+
+  <div class="divider" aria-hidden="true"></div>
+
+  <div class="right-controls">
+    <button id="btnKongpan" class="btn-nav btn-kongpan" onclick="renderReport('กองพัน')">
+      <i class="fas fa-users"></i> เวรกองพัน
+    </button>
+
+    <button id="btnSpk" class="btn-nav btn-spk" onclick="renderReport('ศปก.')">
+      <i class="fas fa-shield-alt"></i> เวร ศปก.
+    </button>
+
+    <button class="btn-nav btn-print" onclick="prepareAndPrint()">
+      <i class="fas fa-print"></i> พิมพ์รายงาน
+    </button>
+
+    <button id="syncBtn" class="btn-nav btn-sync-google" onclick="syncAllToGoogle()">
+      <i class="fab fa-google"></i> Sync
+    </button>
+  </div>
+
 </div>
 
 <div class="calendar-container no-print">
@@ -287,7 +374,8 @@
 
   async function renderReport(group) {
     currentGroup = group;
-
+    setActiveGroupButton(group);
+    
     const month = Number(document.getElementById("monthSelect").value);
     const monthLabel =
       document.getElementById("monthSelect").options[
@@ -602,8 +690,21 @@ async function syncModalDay() {
   }
 }
 
+function setActiveGroupButton(group){
+  const k = document.getElementById("btnKongpan");
+  const s = document.getElementById("btnSpk");
+  if (!k || !s) return;
+
+  k.classList.remove("is-active");
+  s.classList.remove("is-active");
+
+  if (String(group).includes("ศปก")) s.classList.add("is-active");
+  else k.classList.add("is-active");
+}
+
   // ✅ เริ่มต้น
-  renderReport("กองพัน");
+  setActiveGroupButton("กองพัน");
+renderReport("กองพัน");
 </script>
 </body>
 </html>
