@@ -124,7 +124,7 @@
         <div class="form-group">
             <label>3. สังกัด/กลุ่มงาน</label>
             <select id="groupFilter">
-                <option value="กองพัน">กองพัน</option><option value="ศปก.">ศปก.</option>
+                <option value="กองพัน">กองพัน</option><option value="ศปก">ศปก</option>
             </select>
         </div>
 
@@ -143,170 +143,187 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 <script>
-    let allUsers = [];
-    let selectedData = {}; // เก็บข้อมูล { "วันที่": "ผลัด" }
-    let calendar;
+  let allUsers = [];
+  let selectedData = {}; // { "YYYY-MM-DD": "shift_turn" }
+  let calendar;
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        const calendarEl = document.getElementById('calendar');
-        calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            locale: 'th',
-            selectable: true,
-            headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
-            select: function(info) {
-                const date = info.startStr;
-                const role = document.getElementById('roleFilter').value;
-                const currentShift = document.getElementById('workShift').value;
-                const cell = document.querySelector(`[data-date="${date}"]`);
+  document.addEventListener("DOMContentLoaded", async () => {
+    // ===== Calendar =====
+    const calendarEl = document.getElementById("calendar");
+    calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: "dayGridMonth",
+      locale: "th",
+      selectable: true,
+      headerToolbar: { left: "prev,next today", center: "title", right: "" },
+      select: function (info) {
+        const date = info.startStr;
+        const role = document.getElementById("roleFilter").value || "";
+        const currentShift = document.getElementById("workShift").value;
+        const cell = document.querySelector(`[data-date="${date}"]`);
 
-                if(selectedData[date]) {
-                    delete selectedData[date];
-                    if (cell) {
-                        cell.style.setProperty('background-color', '', 'important');
-                        const label = cell.querySelector('.shift-label');
-                        if(label) label.remove();
-                    }
-                } else {
-                    // ถ้าเป็นวิทยุ ให้ใช้ค่าจากช่องเลือกผลัด ถ้าไม่ใช่ให้เป็น 1
-                    const shiftValue = role.includes("วิทยุ") ? currentShift : "1";
-                    selectedData[date] = shiftValue;
-                    
-                    if (cell) {
-                        cell.style.setProperty('background-color', '#dbeafe', 'important');
-                        const shiftText = role.includes("วิทยุ") ? ` (ผ.${shiftValue})` : "";
-                        cell.insertAdjacentHTML('beforeend', `<div class="shift-label" style="font-size:11px; font-weight:bold; color:blue; padding:2px; pointer-events:none;">📍 เลือก${shiftText}</div>`);
-                    }
-                }
-                calendar.unselect();
-            }
-        });
-        calendar.render();
+        if (selectedData[date]) {
+          delete selectedData[date];
+          if (cell) {
+            cell.style.setProperty("background-color", "", "important");
+            const label = cell.querySelector(".shift-label");
+            if (label) label.remove();
+          }
+        } else {
+          const shiftValue = role.includes("วิทยุ") ? currentShift : "1";
+          selectedData[date] = shiftValue;
 
-        try {
-            const res = await fetch('/get-users');
-            allUsers = await res.json();
-            const roleSelect = document.getElementById('roleFilter');
-            const uniqueRoles = [...new Set(allUsers.map(u => u.role.trim()))];
-            roleSelect.innerHTML = '<option value="">-- เลือกหน้าที่ --</option>';
-            uniqueRoles.sort().forEach(r => {
-                if(r) roleSelect.innerHTML += `<option value="${r}">${r}</option>`;
-            });
-        } catch (e) { console.error("โหลดข้อมูลล้มเหลว"); }
+          if (cell) {
+            cell.style.setProperty("background-color", "#dbeafe", "important");
+            const shiftText = role.includes("วิทยุ") ? ` (ผ.${shiftValue})` : "";
+            cell.insertAdjacentHTML(
+              "beforeend",
+              `<div class="shift-label" style="font-size:11px;font-weight:bold;color:blue;padding:2px;pointer-events:none;">📍 เลือก${shiftText}</div>`
+            );
+          }
+        }
+
+        calendar.unselect();
+      },
     });
+    calendar.render();
 
-    function updateSelection() {
-        const role = document.getElementById('roleFilter').value;
-        const userSelect = document.getElementById('userSelect');
-        const shiftSection = document.getElementById('shiftSection');
-        userSelect.innerHTML = '<option value="">-- เลือกชื่อคน --</option>';
-        
-        // โชว์ช่องเลือกผลัดเฉพาะวิทยุ
-        shiftSection.style.display = role.includes("วิทยุ") ? 'block' : 'none';
+    // ===== Load Users =====
+    await loadUsers();
+  });
 
-        const filtered = allUsers.filter(u => u.role.trim() === role.trim());
-        filtered.forEach(u => {
-            userSelect.innerHTML += `<option value="${u.id}">${u.rank_name}</option>`;
+  async function loadUsers() {
+    try {
+      const res = await fetch("/get-users", { cache: "no-store" });
+      const text = await res.text();
+
+      console.log("GET /get-users status:", res.status);
+      console.log("GET /get-users body:", text);
+
+      if (!res.ok) throw new Error("API ERROR " + res.status);
+
+      allUsers = JSON.parse(text);
+
+      const roleSelect = document.getElementById("roleFilter");
+      const roles = [...new Set(allUsers.map((u) => (u.role || "").trim()))]
+        .filter(Boolean)
+        .sort();
+
+      roleSelect.innerHTML = '<option value="">-- เลือกหน้าที่ --</option>';
+      roles.forEach((r) => {
+        roleSelect.innerHTML += `<option value="${r}">${r}</option>`;
+      });
+
+    } catch (e) {
+      console.error("❌ โหลดข้อมูลล้มเหลว:", e);
+      alert("❌ โหลดรายชื่อไม่สำเร็จ\nเปิด F12 → Console ดู error");
+    }
+  }
+
+  function updateSelection() {
+    const role = (document.getElementById("roleFilter").value || "").trim();
+    const userSelect = document.getElementById("userSelect");
+    const shiftSection = document.getElementById("shiftSection");
+
+    userSelect.innerHTML = '<option value="">-- เลือกชื่อคน --</option>';
+
+    // โชว์ช่องเลือกผลัดเฉพาะวิทยุ
+    shiftSection.style.display = role.includes("วิทยุ") ? "block" : "none";
+
+    const filtered = allUsers.filter(
+      (u) => ((u.role || "").trim() === role)
+    );
+
+    filtered.forEach((u) => {
+      userSelect.innerHTML += `<option value="${u.id}">${u.rank_name}</option>`;
+    });
+  }
+
+  async function saveShift() {
+    const userId = document.getElementById("userSelect").value;
+    const roleType = document.getElementById("roleFilter").value;
+    const groupName = document.getElementById("groupFilter").value;
+    const dates = Object.keys(selectedData);
+
+    if (!userId || dates.length === 0) {
+      alert("กรุณาเลือกรายชื่อและวันที่บนปฏิทินก่อนครับ");
+      return;
+    }
+
+    let success = 0;
+    let failed = 0;
+
+    for (const date of dates) {
+      const payload = {
+        user_id: userId,
+        shift_date: date,
+        role_type: roleType,
+        group_name: groupName,
+        shift_turn: selectedData[date],
+        note: "",
+      };
+
+      try {
+        const res = await fetch("/assign-shift", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
         });
-    }
 
-    async function saveShift() {
-        const userId = document.getElementById('userSelect').value;
-        const roleType = document.getElementById('roleFilter').value;
-        const groupName = document.getElementById('groupFilter').value;
-        const dates = Object.keys(selectedData);
-
-        if (!userId || dates.length === 0) {
-            alert("กรุณาเลือกรายชื่อและวันที่บนปฏิทินก่อนครับ");
-            return;
-        }
-
-        let success = 0;
-        for (const date of dates) {
-            const payload = {
-                user_id: userId,
-                shift_date: date,
-                role_type: roleType,
-                group_name: groupName,
-                shift_turn: selectedData[date],
-                note: ""
-            };
-
-            try {
-                const res = await fetch('/assign-shift', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (res.ok) success++;
-            } catch (err) { console.error(err); }
-        }
-
-        if (success > 0) {
-            alert(`✅ บันทึกสำเร็จ ${success} รายการ`);
-            location.reload();
-        } else {
-            alert("❌ บันทึกไม่สำเร็จ เช็คจอดำ (Terminal)");
-        }
-    }
-
-    async function clearAllShifts() {
-    if (!confirm("⚠️ ยืนยันการลบข้อมูลเวรทั้งหมด? (รายชื่อคนจะยังอยู่ แต่ตารางเวรจะว่างเปล่า)")) return;
-    
-    try {
-        // เปลี่ยนจาก fetch เฉยๆ เป็นระบุ method: 'DELETE'
-        const res = await fetch('/clear-shifts', { method: 'DELETE' });
         const msg = await res.text();
-        if (res.ok) {
-            alert(msg);
-            location.reload();
-        } else {
-            alert("❌ " + msg);
+        if (res.ok) success++;
+        else {
+          failed++;
+          console.log("ASSIGN FAIL:", res.status, msg);
         }
-    } catch (err) { 
-        alert("❌ ไม่สามารถเชื่อมต่อกับ Server ได้"); 
+      } catch (err) {
+        failed++;
+        console.error(err);
+      }
     }
-}
 
-    // ฟังก์ชันล้างรายชื่อ (ปุ่มแดง)
-async function clearAllUsers() {
+    if (success > 0) {
+      alert(`✅ บันทึกสำเร็จ ${success} รายการ` + (failed ? `\n⚠️ ไม่สำเร็จ ${failed} รายการ (ดู Console)` : ""));
+      location.reload();
+    } else {
+      alert("❌ บันทึกไม่สำเร็จ (เปิด F12 ดู Console/Network)");
+    }
+  }
+
+  // ✅ ล้างเวรให้ตรงกับ server: DELETE /clear-all-shifts
+  async function clearAllShifts() {
+    if (!confirm("⚠️ ยืนยันการลบข้อมูลเวรทั้งหมด?\n(รายชื่อคนจะยังอยู่เหมือนเดิม)")) return;
+
+    try {
+      const res = await fetch("/clear-all-shifts", { method: "DELETE" });
+      const msg = await res.text();
+      if (res.ok) {
+        alert("✅ ล้างปฏิทินเวรเรียบร้อยแล้ว!");
+        location.reload();
+      } else {
+        alert("❌ " + msg);
+      }
+    } catch (err) {
+      alert("❌ ผิดพลาดในการเชื่อมต่อกับ Server");
+    }
+  }
+
+  // ✅ ล้างรายชื่อให้ตรงกับ server: DELETE /clear-all-users
+  async function clearAllUsers() {
     if (!confirm("🚨 ยืนยันลบรายชื่อทหารทั้งหมด?")) return;
-    try {
-        const res = await fetch('/clear-all-users'); // เรียกปกติแบบ GET
-        if (res.ok) {
-            alert("✅ ล้างข้อมูลเรียบร้อย!");
-            location.reload();
-        }
-    } catch (err) { alert("❌ ลบไม่สำเร็จ"); }
-}
 
-async function clearAllShifts() {
-    if (!confirm("⚠️ ยืนยันล้างปฏิทิน?")) return;
     try {
-        const res = await fetch('/clear-shifts'); // เรียกปกติแบบ GET
-        if (res.ok) {
-            alert("✅ ล้างปฏิทินเรียบร้อย!");
-            location.reload();
-        }
-    } catch (err) { alert("❌ ลบไม่สำเร็จ"); }
-}
-
-// ฟังก์ชันล้างเวร (ปุ่มส้ม) - ตัวที่เพื่อนบอกว่าใช้ได้แล้วแต่เช็ค Method อีกทีให้ชัวร์
-async function clearAllShifts() {
-    if (!confirm("⚠️ ยืนยันการลบข้อมูลบนปฏิทินทั้งหมด?\n(รายชื่อคนจะยังอยู่เหมือนเดิม)")) return;
-    
-    try {
-        const res = await fetch('/clear-shifts', { method: 'DELETE' });
-        if (res.ok) {
-            alert("✅ ล้างปฏิทินเวรเรียบร้อยแล้ว!");
-            location.reload();
-        } else {
-            alert("❌ ลบข้อมูลไม่สำเร็จ");
-        }
-    } catch (err) { 
-        alert("❌ ผิดพลาดในการเชื่อมต่อ"); 
+      const res = await fetch("/clear-all-users", { method: "DELETE" });
+      const msg = await res.text();
+      if (res.ok) {
+        alert("✅ ล้างรายชื่อเรียบร้อย!");
+        location.reload();
+      } else {
+        alert("❌ " + msg);
+      }
+    } catch (err) {
+      alert("❌ ผิดพลาดในการเชื่อมต่อกับ Server");
     }
-}
+  }
 </script>
 </body>
 
