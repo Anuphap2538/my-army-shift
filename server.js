@@ -426,16 +426,17 @@ app.get('/api/my-profile', (req, res) => {
 });
 
 // 2. API ดึงเวรเฉพาะของคนที่ Login
+// ใน server.js
 app.get('/get-my-duty', async (req, res) => {
     try {
         const connection = await getConnection();
-        // เปลี่ยน JOIN เป็น LEFT JOIN เพื่อให้ "เวรวิทยุ" หลุดออกมาด้วย
+        // เพิ่ม s.shift_turn เข้าไปในคำสั่ง SELECT
         const [rows] = await connection.execute(
-    `SELECT s.shift_date, s.role_type, u.rank_name, s.user_id 
-     FROM shift_assignments s
-     LEFT JOIN users u ON s.user_id = u.id 
-     WHERE MONTH(s.shift_date) = 3 AND YEAR(s.shift_date) = 2026`
-);
+            `SELECT s.shift_date, s.role_type, s.shift_turn, u.rank_name, s.user_id 
+             FROM shift_assignments s
+             LEFT JOIN users u ON s.user_id = u.id 
+             WHERE MONTH(s.shift_date) = 3 AND YEAR(s.shift_date) = 2026`
+        );
         await connection.end();
         res.json(rows);
     } catch (err) {

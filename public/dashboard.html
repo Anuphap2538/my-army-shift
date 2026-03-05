@@ -128,52 +128,41 @@
     let scheduleData = {};
     let currentUserName = ""; 
     const YEAR = 2026;
-    const MONTH = 2; 
+    const MONTH = 2; // มีนาคม
     const holidays = { "2026-03-03": "วันมาฆบูชา", "2026-03-04": "วันหยุดชดเชยมาฆบูชา" };
 
     async function init() {
-    try {
-        // 1. ดึง Profile
-        const res = await fetch('/api/my-profile');
-        if (res.status === 401) { window.location.href = '/google/auth'; return; }
-        const userData = await res.json(); 
-        currentUserName = userData.rank_name; 
-        document.getElementById('userNameDisplay').innerText = currentUserName;
+        try {
+            // 1. ดึง Profile
+            const res = await fetch('/api/my-profile');
+            if (res.status === 401) { window.location.href = '/google/auth'; return; }
+            const userData = await res.json(); 
+            currentUserName = userData.rank_name; 
+            document.getElementById('userNameDisplay').innerText = currentUserName;
 
-        // 2. ดึงรายการเวร
-        const sRes = await fetch('/get-my-duty');
-        const myShifts = await sRes.json();
-        console.log("เช็คข้อมูลจากหลังบ้าน:", myShifts.filter(item => item.role_type.includes("วิทยุ")));
-        
-        scheduleData = {};
-
-        if (Array.isArray(myShifts)) {
-           myShifts.forEach(s => {
-    // ใช้ UTC เพื่อป้องกันวันที่เลื่อน (Timezone)
-    const d = new Date(s.shift_date);
-    const year = d.getUTCFullYear();
-    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(d.getUTCDate()).padStart(2, '0');
-    const dateStr = s.shift_date.split('T')[0]; 
-    
-    if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
-    
-    scheduleData[dateStr].push({ 
-        // ถ้าไม่มีชื่อยศ ให้ใช้ประเภทเวรโชว์แทน
-        name: s.rank_name || s.role_type || "เจ้าหน้าที่", 
-        role: s.role_type 
-    });
-});
+            // 2. ดึงรายการเวร
+            const sRes = await fetch('/get-my-duty');
+            const myShifts = await sRes.json();
+            
+            scheduleData = {};
+            if (Array.isArray(myShifts)) {
+                myShifts.forEach(s => {
+                    const dateStr = s.shift_date.split('T')[0]; 
+                    if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
+                    
+                    scheduleData[dateStr].push({ 
+                        name: s.rank_name || s.role_type || "เจ้าหน้าที่", 
+                        role: s.role_type,
+                        turn: parseInt(s.shift_turn || 1) // เก็บเลขผลัดไว้แยก
+                    });
+                });
+            }
+            renderCalendar();
+        } catch(e) { 
+            console.error("Init Error:", e);
+            renderCalendar(); 
         }
-
-        console.log("เช็คข้อมูลที่จัดเสร็จแล้ว:", scheduleData); // เปิด F12 ดูว่า dateStr ตรงกับ 2026-03-08 ไหม
-        renderCalendar();
-
-    } catch(e) { 
-        console.error("Init Error:", e);
-        renderCalendar(); 
     }
-}
 
     function renderCalendar() {
         const grid = document.getElementById('calendarGrid');
@@ -204,16 +193,15 @@
             cell.innerHTML = `<span class="${colorClass}">${i}</span>${holidayName ? `<span class="holiday-name">${holidayName}</span>` : ''}`;
 
             const duties = scheduleData[dateStr] || [];
-const isMe = duties.some(d => d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, ''));
+            const isMe = duties.some(d => d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, ''));
 
-if (isMe) {
-    cell.classList.add('duty-active'); // เวรเราขึ้นแถบน้ำเงิน
-} else if (duties.length > 0) {
-    // ถ้ามีเวรอื่น (เช่น เวรวิทยุเพื่อน) ให้ขึ้นจุดใต้เลขวันที่
-    const dot = document.createElement('div');
-    dot.className = 'duty-dot'; 
-    cell.appendChild(dot);
-}
+            if (isMe) {
+                cell.classList.add('duty-active'); 
+            } else if (duties.length > 0) {
+                const dot = document.createElement('div');
+                dot.className = 'duty-dot'; 
+                cell.appendChild(dot);
+            }
 
             cell.onclick = () => showInfo(i, dateStr, holidayName, duties);
             grid.appendChild(cell);
@@ -226,6 +214,8 @@ if (isMe) {
         const selectedUser = currentUserName;
 
         const myDuties = duties.filter(d => d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, ''));
+        
+        // จุดล็อค: ถ้าไม่ใช่เวรเรา ห้ามเปิด Modal
         if (myDuties.length === 0) return; 
         
         modal.style.display = 'flex';
@@ -233,17 +223,17 @@ if (isMe) {
 
         const orderKongPan = ["นายทหารเวรกองพัน", "จ่าเวรร้อย สนน.", "จ่าเวรร้อย รก.", "จ่าเวรร้อย ทย.", "จ่าเวรร้อย ตอ.", "จ่าเวรหน่วยฝึกทหารใหม่", "จ่าเวร มว.สุนัขทหาร", "จ่าเวร ขส.", "จ่าเวรสูทกรรม"];
         const orderSPK = [
-    { label: "นายทหารเวร ศปก.", role: "นายทหารเวร ศปก.", turn: 1 },
-    { label: "เวรวิทยุ ผลัด 1", role: "เวรวิทยุ", turn: 1 },
-    { label: "เวรวิทยุ ผลัด 2", role: "เวรวิทยุ", turn: 2 },
-    { label: "เวรวิทยุ ผลัด 3", role: "เวรวิทยุ", turn: 3 },
-    { label: "เวร สยย.", role: "เวร สยย.", turn: 1 },
-    { label: "เวร ชป.", role: "เวร ชป.", turn: 1 },
-    { label: "เวรสายตรวจสุนัขทหาร", role: "เวรสายตรวจสุนัขทหาร", turn: 1 }
-];
-    }
+            { label: "นายทหารเวร ศปก.", role: "นายทหารเวร ศปก.", turn: 1 },
+            { label: "เวรวิทยุ ผลัด 1", role: "เวรวิทยุ", turn: 1 },
+            { label: "เวรวิทยุ ผลัด 2", role: "เวรวิทยุ", turn: 2 },
+            { label: "เวรวิทยุ ผลัด 3", role: "เวรวิทยุ", turn: 3 },
+            { label: "เวร สยย.", role: "เวร สยย.", turn: 1 },
+            { label: "เวร ชป.", role: "เวร ชป.", turn: 1 },
+            { label: "เวรสายตรวจสุนัขทหาร", role: "เวรสายตรวจสุนัขทหาร", turn: 1 }
+        ];
+
         const amIKongPan = myDuties.some(d => orderKongPan.some(role => d.role.includes(role)));
-        const amISPK = myDuties.some(d => orderSPK.some(role => d.role.includes(role)) || d.role.includes("วิทยุ"));
+        const amISPK = myDuties.some(d => orderSPK.some(item => d.role.includes(item.role)) || d.role.includes("วิทยุ"));
 
         let showKP = true, showSPK = true;
         if (amIKongPan && !amISPK) showSPK = false; 
@@ -252,11 +242,10 @@ if (isMe) {
         let gridStyle = (showKP && showSPK) ? "grid-template-columns: 1fr 1fr;" : "grid-template-columns: 1fr;";
         let html = `<div style="display: grid; ${gridStyle} gap: 20px;">`;
         
-        // แก้ findDuty ให้ค้นหาได้กว้างขึ้น
-const findDuty = (roleName) => duties.find(d => 
-    d.role.replace(/\s+/g, '').includes(roleName.replace(/\s+/g, '')) || 
-    roleName.replace(/\s+/g, '').includes(d.role.replace(/\s+/g, ''))
-);
+        const findDuty = (roleName) => duties.find(d => 
+            d.role.replace(/\s+/g, '').includes(roleName.replace(/\s+/g, '')) || 
+            roleName.replace(/\s+/g, '').includes(d.role.replace(/\s+/g, ''))
+        );
 
         if (showKP) {
             html += `<div><h4 style="color:#f1c40f; border-bottom:2px solid rgba(241, 196, 15, 0.3); margin: 0 0 15px 0; padding-bottom: 5px; font-size:1.1em;">🛡️ กองพัน</h4>`;
@@ -272,30 +261,28 @@ const findDuty = (roleName) => duties.find(d =>
         }
 
         if (showSPK) {
-    html += `<div><h4 style="color:#3b82f6; border-bottom:2px solid rgba(59, 130, 246, 0.3); margin: 0 0 15px 0; padding-bottom: 5px; font-size:1.1em;">📡 ศปก.</h4>`;
-    
-    orderSPK.forEach(item => {
-        // ค้นหาคนที่มีบทบาทตรงกัน และ ผลัด (turn) ตรงกันเป๊ะๆ
-        const d = duties.find(duty => 
-            duty.role.includes(item.role) && 
-            parseInt(duty.shift_turn || 1) === item.turn
-        );
-
-        const isMeLine = d && d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, '');
-        
-        html += `<div style="margin-bottom:12px;">
-                    <span style="font-size:0.8em; color:#94a3b8; display:block;">${item.label}</span>
-                    <span style="font-size:1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold;' : 'color:#fff;'}">
-                        ${d ? d.name : '-'}
-                    </span>
-                 </div>`;
-    });
-    html += `</div>`;
-}
+            html += `<div><h4 style="color:#3b82f6; border-bottom:2px solid rgba(59, 130, 246, 0.3); margin: 0 0 15px 0; padding-bottom: 5px; font-size:1.1em;">📡 ศปก.</h4>`;
+            orderSPK.forEach(item => {
+                const d = duties.find(duty => 
+                    duty.role.includes(item.role) && 
+                    parseInt(duty.turn || 1) === item.turn
+                );
+                const isMeLine = d && d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, '');
+                html += `<div style="margin-bottom:12px;">
+                            <span style="font-size:0.8em; color:#94a3b8; display:block;">${item.label}</span>
+                            <span style="font-size:1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold;' : 'color:#fff;'}">${d ? d.name : '-'}</span>
+                         </div>`;
+            });
+            html += `</div>`;
+        }
+        html += `</div>`;
+        list.innerHTML = html; // แสดงผล HTML เข้าไปใน Modal
+    }
 
     function closeModal() { document.getElementById('dutyModal').style.display = 'none'; }
     window.onclick = function(event) { if (event.target == document.getElementById('dutyModal')) closeModal(); }
     init();
 </script>
+
 </body>
 </html>
