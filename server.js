@@ -32,6 +32,8 @@ app.use(
 DATABASE POOL
 ========================= */
 
+const mysql = require("mysql2/promise");
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -40,10 +42,8 @@ const pool = mysql.createPool({
   port: process.env.DB_PORT,
   ssl: {
     minVersion: "TLSv1.2",
-    rejectUnauthorized: true,
-  },
-  waitForConnections: true,
-  connectionLimit: 10,
+    rejectUnauthorized: true
+  }
 });
 
 /* =========================
