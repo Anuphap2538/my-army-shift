@@ -386,18 +386,21 @@ app.get("/get-report-calendar", async (req, res) => {
 });
 
 /* =========================
-SYNC: TODAY
+SYNC: BY SELECTED DATE
 ========================= */
-app.post("/sync-today", async (req, res) => {
+app.post("/sync-date", async (req, res) => {
   try {
-    const today = new Date();
-    const dateStr = today.toISOString().split("T")[0];
+    const { date } = pickBodyOrQuery(req); // รองรับทั้ง body/query
+    if (!date) return res.status(400).json({ error: "missing date (YYYY-MM-DD)" });
+
+    // บังคับรูปแบบวันที่ให้ชัวร์
+    const dateStr = String(date).slice(0, 10); // YYYY-MM-DD
 
     const [rows] = await pool.execute(
       `SELECT s.*, u.rank_name, u.email, u.google_token
        FROM shift_assignments s
        JOIN users u ON s.user_id=u.id
-       WHERE s.shift_date=?`,
+       WHERE DATE(s.shift_date)=?`,
       [dateStr]
     );
 
@@ -414,13 +417,14 @@ app.post("/sync-today", async (req, res) => {
         await sendToGoogleCalendar(auth, shift, rows);
         success++;
       } catch (err) {
-        console.log("SYNC TODAY ERR:", err.message);
+        console.log("SYNC DATE ERR:", err.message);
         skip++;
       }
     }
 
     res.json({
-      message: `ซิงค์เวรวันนี้สำเร็จ ${success} นาย / ข้าม ${skip} นาย`,
+      success: true,
+      message: `ซิงค์เวรวันที่ ${dateStr} สำเร็จ ${success} นาย / ข้าม ${skip} นาย`,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -209,6 +209,9 @@
             <option value="11">พฤศจิกายน</option>
             <option value="12">ธันวาคม</option>
         </select>
+
+        <input id="syncDate" type="date"
+style="padding:10px 15px;border-radius:12px;border:none;font-weight:700;" />
         
         <button class="btn-nav btn-kongpan" onclick="renderReport('กองพัน')">
             <i class="fas fa-users"></i> เวรกองพัน
@@ -222,8 +225,8 @@
             <i class="fas fa-print"></i> พิมพ์รายงาน
         </button>
         
-        <button id="syncTodayBtn" class="btn-nav btn-sync-google" onclick="syncToday()">
-  ซิงค์เวรวันนี้
+        <button id="syncDateBtn" class="btn-nav btn-sync-google" onclick="syncSelectedDate()">
+  <i class="fas fa-calendar-check"></i> ซิงค์ตามวันที่เลือก
 </button>
 
 <button id="syncBtn" class="btn-nav btn-sync-google" onclick="syncAllToGoogle()">
@@ -505,6 +508,53 @@
       btn.innerHTML = "<i class='fas fa-bolt'></i> ซิงค์เวรวันนี้";
     }
   }
+
+  // ตั้งค่า default วันที่เป็น "วันนี้" เวลาเปิดหน้า report
+(function setDefaultSyncDate(){
+  const el = document.getElementById("syncDate");
+  if (!el) return;
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  el.value = `${yyyy}-${mm}-${dd}`;
+})();
+
+async function syncSelectedDate() {
+  const btn = document.getElementById("syncDateBtn");
+  const date = document.getElementById("syncDate")?.value;
+
+  if (!date) {
+    alert("❌ กรุณาเลือกวันที่ที่จะซิงค์ก่อน");
+    return;
+  }
+
+  if (!confirm(`ต้องการซิงค์เวรวันที่ ${date} เข้า Google Calendar หรือไม่?`)) return;
+
+  btn.disabled = true;
+  btn.innerHTML = "⏳ กำลังซิงค์...";
+
+  try {
+    const res = await fetch(`/sync-date`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert(`✅ ${data.message}`);
+    } else {
+      alert(`❌ Sync ไม่สำเร็จ: ${data.error || "unknown error"}`);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("❌ Server Error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "<i class='fas fa-calendar-check'></i> ซิงค์ตามวันที่เลือก";
+  }
+}
 
   // ✅ เริ่มต้น
   renderReport("กองพัน");
