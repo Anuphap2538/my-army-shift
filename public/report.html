@@ -276,7 +276,6 @@
   let currentGroup = "กองพัน";
   let fullData = {};
 
-  const normGroup = (g) => String(g || "").trim().replace("ศปก.", "ศปก");
   const getRole = (x) => (x.role_type || x.role || "");
 
 
@@ -308,16 +307,13 @@
 
       fullData = {};
       dataCal.forEach((item) => {
-        // ✅ กัน timezone เพี้ยน: ใช้วันที่จาก string ถ้ามาเป็น YYYY-MM-DD
-        const dateObj =
-          typeof item.shift_date === "string"
-            ? new Date(item.shift_date + "T00:00:00")
-            : new Date(item.shift_date);
 
-        const d = dateObj.getDate();
-        if (!fullData[d]) fullData[d] = [];
-        fullData[d].push(item);
-      });
+  const d = parseInt(item.shift_date.substring(8,10));
+
+  if(!fullData[d]) fullData[d] = [];
+  fullData[d].push(item);
+
+});
 
       const firstDay = new Date(currentYear, month - 1, 1).getDay();
       const daysInMonth = new Date(currentYear, month, 0).getDate();
