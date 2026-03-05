@@ -222,9 +222,14 @@
             <i class="fas fa-print"></i> พิมพ์รายงาน
         </button>
         
-        <button id="syncBtn" class="btn-nav btn-sync-google" onclick="syncAllToGoogle()">
-            <i class="fab fa-google"></i> ซิงค์ Google Calendar
-        </button>
+        <button id="syncTodayBtn" class="btn-nav btn-sync-google" onclick="syncToday()">
+<i class="fas fa-bolt"></i> ซิงค์เวรวันนี้
+</button>
+
+<button id="syncBtn" class="btn-nav btn-sync-google" onclick="syncAllToGoogle()">
+<i class="fab fa-google"></i> ซิงค์ Google Calendar
+</button>
+           
     </div>
 </div>
 
@@ -365,16 +370,41 @@
     }
 
     async function syncAllToGoogle() {
-        const btn = document.getElementById('syncBtn');
-        const month = document.getElementById('monthSelect').value;
-        if(!confirm(`ซิงค์ข้อมูลใช่หรือไม่?`)) return;
-        btn.innerHTML = "⏳ กำลังซิงค์...";
-        try {
-            await fetch(`/sync-existing-shifts?month=${month}&year=2026&group=${currentGroup}`, { method: 'POST' });
-            alert("✅ ซิงค์สำเร็จ!");
-        } catch (err) { alert("Error"); }
-        finally { btn.innerHTML = "<i class='fab fa-google'></i> ซิงค์ Google Calendar"; }
+
+    const btn = document.getElementById('syncBtn');
+    const month = document.getElementById('monthSelect').value;
+
+    if(!confirm(`ต้องการซิงค์เวร ${currentGroup} เดือนนี้เข้า Google Calendar หรือไม่?`)) return;
+
+    btn.disabled = true;
+    btn.innerHTML = "⏳ กำลังซิงค์...";
+
+    try {
+
+        const res = await fetch(`/sync-existing-shifts?month=${month}&year=2026&group=${currentGroup}`, {
+            method: 'POST'
+        });
+
+        const data = await res.json();
+
+        if(res.ok){
+            alert(`✅ ${data.message}`);
+        }else{
+            alert(`❌ Sync ไม่สำเร็จ`);
+        }
+
+    } catch (err) {
+
+        console.error(err);
+        alert("❌ Server Error");
+
+    } finally {
+
+        btn.disabled = false;
+        btn.innerHTML = "<i class='fab fa-google'></i> ซิงค์ Google Calendar";
+
     }
+}
 
     async function deleteEntry(id, name, day) {
         if (confirm(`ลบ ${name}?`)) {
@@ -386,6 +416,46 @@
     function closeModal() { document.getElementById('dutyModal').style.display = 'none'; }
     window.onclick = (e) => { if(e.target == document.getElementById('dutyModal')) closeModal(); }
     renderReport('กองพัน');
+
+    async function syncToday() {
+
+    const btn = document.getElementById('syncTodayBtn');
+    const today = new Date();
+    
+    const month = today.getMonth() + 1;
+    const year = today.getFullYear();
+
+    if(!confirm("ต้องการซิงค์เวรของวันนี้เข้า Google Calendar หรือไม่?")) return;
+
+    btn.disabled = true;
+    btn.innerHTML = "⏳ กำลังซิงค์...";
+
+    try {
+
+        const res = await fetch(`/sync-today?month=${month}&year=${year}&group=${currentGroup}`, {
+            method: "POST"
+        });
+
+        const data = await res.json();
+
+        if(res.ok){
+            alert(`✅ ${data.message}`);
+        }else{
+            alert("❌ Sync ไม่สำเร็จ");
+        }
+
+    } catch(err){
+
+        console.error(err);
+        alert("❌ Server Error");
+
+    } finally {
+
+        btn.disabled = false;
+        btn.innerHTML = "<i class='fas fa-bolt'></i> ซิงค์เวรวันนี้";
+
+    }
+}
 </script>
 </body>
 </html>

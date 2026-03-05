@@ -262,9 +262,112 @@ app.post("/assign-shift", async (req, res) => {
   }
 });
 
+app.post("/sync-today", async (req, res) => {
+
+  try {
+
+    const today = new Date();
+    const dateStr = today.toISOString().split("T")[0];
+
+    const [rows] = await pool.execute(
+      `SELECT s.*,u.rank_name,u.email,u.google_token
+      FROM shift_assignments s
+      JOIN users u ON s.user_id=u.id
+      WHERE s.shift_date=?`,
+      [dateStr]
+    );
+
+    let success = 0;
+    let skip = 0;
+
+    for (const shift of rows) {
+
+      if (!shift.google_token) {
+        skip++;
+        continue;
+      }
+
+      try {
+
+        const auth = new google.auth.OAuth2(
+          process.env.GOOGLE_CLIENT_ID,
+          process.env.GOOGLE_CLIENT_SECRET,
+          REDIRECT_URI
+        );
+
+        auth.setCredentials(JSON.parse(shift.google_token));
+
+        await sendToGoogleCalendar(auth, shift, rows);
+
+        success++;
+
+      } catch (err) {
+
+        console.log(err.message);
+        skip++;
+
+      }
+
+    }
+
+    res.json({
+      message: `ซิงค์เวรวันนี้สำเร็จ ${success} นาย / ข้าม ${skip} นาย`
+    });
+
+  } catch (err) {
+
+    res.status(500).json({ error: err.message });
+
+  }
+
+});
+
 /* =========================
 GET USERS & SHIFTS
 ========================= */
+
+app.get("/get-report-calendar", async (req, res) => {
+  try {
+
+    const { month, year, group } = req.query;
+
+    const [rows] = await pool.execute(
+      `SELECT s.*,u.rank_name
+       FROM shift_assignments s
+       JOIN users u ON s.user_id=u.id
+       WHERE MONTH(s.shift_date)=?
+       AND YEAR(s.shift_date)=?
+       AND TRIM(s.group_name)=TRIM(?)`,
+      [month, year, group]
+    );
+
+    res.json(rows);
+
+  } catch (err) {
+
+    res.status(500).send(err.message);
+
+  }
+});
+
+app.delete("/delete-shift/:id", async (req, res) => {
+  try {
+
+    const { id } = req.params;
+
+    await pool.execute(
+      "DELETE FROM shift_assignments WHERE id=?",
+      [id]
+    );
+
+    res.send("ok");
+
+  } catch (err) {
+
+    res.status(500).send(err.message);
+
+  }
+});
 
 app.get("/get-users", async (req, res) => {
   try {
