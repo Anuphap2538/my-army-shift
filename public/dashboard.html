@@ -154,8 +154,8 @@
     if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
     
     scheduleData[dateStr].push({ 
-        // ถ้า u.rank_name เป็น NULL ให้เอาค่า s.role_type มาแสดงแทน (เช่น "เวรวิทยุ")
-        name: s.rank_name || s.role_type || "เจ้าหน้าที่เวร", 
+        // ถ้า s.rank_name ไม่มีค่า ให้ใช้ s.role_type (เวรวิทยุ) มาโชว์เป็นชื่อแทนไปเลย
+        name: s.rank_name || s.role_type || "เจ้าหน้าที่", 
         role: s.role_type 
     });
 });

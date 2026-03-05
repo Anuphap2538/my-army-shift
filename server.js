@@ -429,7 +429,7 @@ app.get('/api/my-profile', (req, res) => {
 app.get('/get-my-duty', async (req, res) => {
     try {
         const connection = await getConnection();
-        // เปลี่ยน JOIN เป็น LEFT JOIN เพื่อไม่ให้เวรวิทยุหาย
+        // เปลี่ยน JOIN เป็น LEFT JOIN เพื่อให้ "เวรวิทยุ" หลุดออกมาด้วย
         const [rows] = await connection.execute(
             `SELECT s.shift_date, s.role_type, u.rank_name, s.user_id 
              FROM shift_assignments s
@@ -441,8 +441,7 @@ app.get('/get-my-duty', async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
-}); 
-
+});
 // ==========================================
 // ฟังก์ชันที่ใช้ส่ง Calendar
 // ==========================================
