@@ -371,14 +371,19 @@ app.delete("/delete-shift/:id", async (req, res) => {
 
 app.get("/get-users", async (req, res) => {
   try {
-    const [rows] = await pool.execute(`
-      SELECT id,rank_name,role,email,
-      (google_token IS NOT NULL) as is_linked
-      FROM users
-      ORDER BY id
-    `);
+
+    const [rows] = await pool.execute(
+      "SELECT id, rank_name, role FROM users ORDER BY id"
+    );
+
     res.json(rows);
-  } catch (err) { res.status(500).send(err.message); }
+
+  } catch (err) {
+
+    console.error("GET USERS ERROR:", err);
+    res.status(500).send(err.message);
+
+  }
 });
 
 app.get("/get-shifts", async (req, res) => {
