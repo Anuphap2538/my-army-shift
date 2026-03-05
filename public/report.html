@@ -210,9 +210,6 @@
             <option value="12">ธันวาคม</option>
         </select>
 
-        <input id="syncDate" type="date"
-style="padding:10px 15px;border-radius:12px;border:none;font-weight:700;" />
-        
         <button class="btn-nav btn-kongpan" onclick="renderReport('กองพัน')">
             <i class="fas fa-users"></i> เวรกองพัน
         </button>
@@ -225,10 +222,6 @@ style="padding:10px 15px;border-radius:12px;border:none;font-weight:700;" />
             <i class="fas fa-print"></i> พิมพ์รายงาน
         </button>
         
-        <button id="syncDateBtn" class="btn-nav btn-sync-google" onclick="syncSelectedDate()">
-  <i class="fas fa-calendar-check"></i> ซิงค์ตามวันที่เลือก
-</button>
-
 <button id="syncBtn" class="btn-nav btn-sync-google" onclick="syncAllToGoogle()">
   ซิงค์ Google Calendar
 </button>
@@ -269,13 +262,23 @@ style="padding:10px 15px;border-radius:12px;border:none;font-weight:700;" />
             <span style="cursor:pointer; font-size:30px; line-height: 1;" onclick="closeModal()">&times;</span>
         </div>
         <div id="modalBody" class="modal-body"></div>
-        <div style="padding:15px; text-align:right; border-top: 1px solid #eee;">
-            <button class="btn-nav" style="background:#64748b; color:white;" onclick="closeModal()">ปิดหน้าต่าง</button>
-        </div>
+        <div style="padding:15px; border-top: 1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+    <!-- ซ้ายล่าง: ปุ่มซิงค์วันนั้น -->
+    <button id="syncModalBtn" class="btn-nav btn-sync-google" style="background: var(--success); color:white;"
+            onclick="syncModalDay()">
+        <i class="fas fa-calendar-check"></i> ซิงค์วันนี้ในปฏิทิน
+    </button>
+
+    <!-- ขวาล่าง: ปิด -->
+    <button class="btn-nav" style="background:#64748b; color:white;" onclick="closeModal()">
+        ปิดหน้าต่าง
+    </button>
+</div>
     </div>
 </div>
 
 <script>
+  let currentModalDate = null; // YYYY-MM-DD ของวันที่ที่เปิด popup อยู่
   let currentGroup = "กองพัน";
   let fullData = {};
 
@@ -411,6 +414,17 @@ style="padding:10px 15px;border-radius:12px;border:none;font-weight:700;" />
       ].text;
 
     document.getElementById("modalTitle").innerText = `วันที่ ${day} ${monthName}`;
+    
+    // ✅ คำนวณ YYYY-MM-DD จากเดือน/ปีที่เลือก
+const month = Number(document.getElementById("monthSelect").value);
+const year = new Date().getFullYear(); // ถ้าเพื่อน fix 2026 ก็เปลี่ยนเป็น 2026
+const mm = String(month).padStart(2, "0");
+const dd = String(day).padStart(2, "0");
+currentModalDate = `${year}-${mm}-${dd}`;
+
+// อัปเดตข้อความบนปุ่มให้ชัด
+const b = document.getElementById("syncModalBtn");
+if (b) b.innerHTML = `<i class="fas fa-calendar-check"></i> ซิงค์ ${currentModalDate}`;
 
     const body = document.getElementById("modalBody");
 
@@ -553,6 +567,38 @@ async function syncSelectedDate() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = "<i class='fas fa-calendar-check'></i> ซิงค์ตามวันที่เลือก";
+  }
+}
+
+async function syncModalDay() {
+  if (!currentModalDate) {
+    alert("❌ ไม่พบวันที่สำหรับซิงค์");
+    return;
+  }
+
+  const btn = document.getElementById("syncModalBtn");
+  if (!confirm(`ต้องการซิงค์เวรวันที่ ${currentModalDate} เข้า Google Calendar หรือไม่?`)) return;
+
+  btn.disabled = true;
+  const oldHtml = btn.innerHTML;
+  btn.innerHTML = "⏳ กำลังซิงค์...";
+
+  try {
+    const res = await fetch("/sync-date", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: currentModalDate })
+    });
+
+    const data = await res.json();
+    if (res.ok) alert(`✅ ${data.message}`);
+    else alert(`❌ Sync ไม่สำเร็จ: ${data.error || "unknown error"}`);
+  } catch (err) {
+    console.error(err);
+    alert("❌ Server Error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = oldHtml;
   }
 }
 
