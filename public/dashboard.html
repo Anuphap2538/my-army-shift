@@ -232,8 +232,16 @@ if (isMe) {
         document.getElementById('displayDate').innerText = `วันที่ ${day} มีนาคม 2569 ${holidayName ? '('+holidayName+')' : ''}`;
 
         const orderKongPan = ["นายทหารเวรกองพัน", "จ่าเวรร้อย สนน.", "จ่าเวรร้อย รก.", "จ่าเวรร้อย ทย.", "จ่าเวรร้อย ตอ.", "จ่าเวรหน่วยฝึกทหารใหม่", "จ่าเวร มว.สุนัขทหาร", "จ่าเวร ขส.", "จ่าเวรสูทกรรม"];
-        const orderSPK = ["นายทหารเวร ศปก.", "เวรวิทยุ", "เวรวิทยุ ผลัด 1", "เวรวิทยุ ผลัด 2", "เวรวิทยุ ผลัด 3", "เวร สยย.", "เวร ชป.", "เวรสายตรวจสุนัขทหาร"];
-
+        const orderSPK = [
+    { label: "นายทหารเวร ศปก.", role: "นายทหารเวร ศปก.", turn: 1 },
+    { label: "เวรวิทยุ ผลัด 1", role: "เวรวิทยุ", turn: 1 },
+    { label: "เวรวิทยุ ผลัด 2", role: "เวรวิทยุ", turn: 2 },
+    { label: "เวรวิทยุ ผลัด 3", role: "เวรวิทยุ", turn: 3 },
+    { label: "เวร สยย.", role: "เวร สยย.", turn: 1 },
+    { label: "เวร ชป.", role: "เวร ชป.", turn: 1 },
+    { label: "เวรสายตรวจสุนัขทหาร", role: "เวรสายตรวจสุนัขทหาร", turn: 1 }
+];
+    }
         const amIKongPan = myDuties.some(d => orderKongPan.some(role => d.role.includes(role)));
         const amISPK = myDuties.some(d => orderSPK.some(role => d.role.includes(role)) || d.role.includes("วิทยุ"));
 
@@ -264,20 +272,26 @@ const findDuty = (roleName) => duties.find(d =>
         }
 
         if (showSPK) {
-            html += `<div><h4 style="color:#3b82f6; border-bottom:2px solid rgba(59, 130, 246, 0.3); margin: 0 0 15px 0; padding-bottom: 5px; font-size:1.1em;">📡 ศปก.</h4>`;
-            orderSPK.forEach(role => {
-                const d = findDuty(role);
-                const isMeLine = d && d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, '');
-                html += `<div style="margin-bottom:12px;">
-                            <span style="font-size:0.8em; color:#94a3b8; display:block;">${role}</span>
-                            <span style="font-size:1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold;' : 'color:#fff;'}">${d ? d.name : '-'}</span>
-                         </div>`;
-            });
-            html += `</div>`;
-        }
-        html += `</div>`;
-        list.innerHTML = html;
-    }
+    html += `<div><h4 style="color:#3b82f6; border-bottom:2px solid rgba(59, 130, 246, 0.3); margin: 0 0 15px 0; padding-bottom: 5px; font-size:1.1em;">📡 ศปก.</h4>`;
+    
+    orderSPK.forEach(item => {
+        // ค้นหาคนที่มีบทบาทตรงกัน และ ผลัด (turn) ตรงกันเป๊ะๆ
+        const d = duties.find(duty => 
+            duty.role.includes(item.role) && 
+            parseInt(duty.shift_turn || 1) === item.turn
+        );
+
+        const isMeLine = d && d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, '');
+        
+        html += `<div style="margin-bottom:12px;">
+                    <span style="font-size:0.8em; color:#94a3b8; display:block;">${item.label}</span>
+                    <span style="font-size:1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold;' : 'color:#fff;'}">
+                        ${d ? d.name : '-'}
+                    </span>
+                 </div>`;
+    });
+    html += `</div>`;
+}
 
     function closeModal() { document.getElementById('dutyModal').style.display = 'none'; }
     window.onclick = function(event) { if (event.target == document.getElementById('dutyModal')) closeModal(); }
