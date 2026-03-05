@@ -1,710 +1,641 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>กองพันทหารอากาศโยธิน รร.การบิน Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        :root {
-            --primary: #3b82f6;
-            --primary-dark: #1e40af;
-            --success: #10b981;
-            --danger: #ef4444;
-            --glass: rgba(255, 255, 255, 0.4);
-            --border: rgba(255, 255, 255, 0.2);
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>กองพันทหารอากาศโยธิน รร.การบิน Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
 
-        body {
-            font-family: 'Sarabun', sans-serif;
-            margin: 0; padding: 20px; min-height: 100vh;
-            background-image: linear-gradient(rgba(241, 245, 249, 0.3), rgba(241, 245, 249, 0.3)), 
-                              url('images/pa.jpg');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            position: relative;
-        }
-
-        body::before {
-            content: "";
-            position: fixed; inset: 0;
-            background: inherit;
-            filter: blur(5px);
-            z-index: -1;
-        }
-
-        .top-navigation {
-            max-width: 1200px; margin: 0 auto 20px auto;
-            display: flex; flex-direction: column;
-            background: var(--primary);
-            padding: 25px 30px; border-radius: 25px; 
-            border: 1px solid rgba(255,255,255,0.2);
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2);
-            color: white;
-            gap: 15px;
-        }
-
-        .brand-area { display: flex; align-items: center; gap: 20px; }
-        .logo-img { width: 80px; height: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
-        .brand-text h1 { margin: 0; font-size: 26px; color: white; font-weight: 700; }
-        .brand-text p { margin: 2px 0 0 0; font-size: 14px; color: rgba(255,255,255,0.9); }
-
-        .controls-wrapper { 
-    display: flex; 
-    flex-wrap: wrap; 
-    align-items: center; 
-    gap: 12px; 
-    border-top: 1px solid rgba(255,255,255,0.2);
-    padding-top: 15px; 
-    width: 100%;
-    justify-content: flex-end; 
-}
-
-        #monthSelect {
-    padding: 12px 18px;
-    width: 180px;   /* ⭐ ขยายช่องเลือกเดือน */
-    border-radius: 12px;
-    border: none;
-    font-family: inherit;
-    font-weight: 700;
-    font-size: 16px;
-    cursor: pointer;
-    color: var(--primary-dark);
-    background: white;
-}
-  
-        .btn-nav {
-            padding: 10px 18px; border-radius: 12px; border: none;
-            font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; 
-            transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
-            white-space: nowrap; flex-shrink: 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .btn-kongpan { background: var(--danger) !important; color: white; }
-        .btn-spk { background: var(--primary-dark) !important; color: white; }
-        .btn-print { background: #f59e0b !important; color: white; }
-        .btn-sync-google { background: var(--success) !important; color: white; }
-        .btn-nav:hover { transform: translateY(-2px); filter: brightness(1.1); }
-
-        .calendar-container {
-            max-width: 1200px; margin: 0 auto; background: var(--glass);
-            backdrop-filter: blur(10px); border-radius: 25px; padding: 25px; 
-            box-shadow: 0 5px 20px rgba(0,0,0,0.03); border: 1px solid var(--border);
-        }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
-        .weekday { text-align: center; font-weight: 700; color: #475569; font-size: 16px; padding-bottom: 15px; }
-        
-        .day-cell {
-            min-height: 110px; background: #fff; border-radius: 15px; padding: 12px;
-            border: 1px solid #f1f5f9; transition: 0.2s; cursor: pointer;
-            display: flex; flex-direction: column;
-        }
-        .day-cell:hover { border-color: var(--primary); background: #f8fafc; }
-        .date-number { font-size: 17px; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; }
-        
-        .badge-boss { 
-            font-size: 13px; color: var(--primary-dark); font-weight: 700; 
-            background: #eef2ff; padding: 6px 10px; border-radius: 8px; 
-            margin-top: 4px; border: 1px solid #e0e7ff;
-            display: block; width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .badge-count { font-size: 11px; color: #94a3b8; margin-top: auto; font-weight: 500; }
-
-        .modal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center; }
-        .modal-content { background: white; width: 90%; max-width: 450px; border-radius: 25px; overflow: hidden; }
-        .modal-header { background: var(--primary-dark); color: white; padding: 20px 25px; display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { padding: 15px; max-height: 400px; overflow-y: auto; }
-        .duty-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #f1f5f9; }
-        .btn-del { color: #94a3b8; background: #f1f5f9; border: none; padding: 8px 12px; border-radius: 10px; cursor: pointer; transition: 0.2s; }
-        .btn-del:hover { color: white; background: var(--danger); }
-        
-        /* ✅ แก้ไขปฏิทินหลุดเฟรมสำหรับหน้าจอคอมพิวเตอร์ */
-        @media (min-width: 1025px) {
-            .calendar-container {
-                max-width: 1100px; /* กำหนดความกว้างสูงสุดไม่ให้หลุดเฟรม */
-                margin: 0 auto;    /* จัดให้อยู่กึ่งกลางหน้าจอ */
-            }
-            
-            .top-navigation {
-                max-width: 1100px; /* ปรับแถบเมนูด้านบนให้กว้างเท่ากับปฏิทิน */
-                margin: 0 auto 20px auto;
-            }
-
-            .calendar-grid {
-                gap: 15px; /* เพิ่มช่องว่างระหว่างวันให้ดูสบายตาขึ้นในจอใหญ่ */
-            }
-
-            .day-cell {
-                min-height: 130px; /* เพิ่มความสูงของช่องวันให้สมดุลกับความกว้าง */
-            }
-        }  
-
-        @media print {
-            body { background: white !important; }
-            .no-print, .top-navigation, .calendar-container, .modal { display: none !important; }
-            .print-only { display: block !important; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            th, td { border: 1px solid #000; padding: 10px; text-align: left; font-size: 14px; }
-            th { background-color: #eee !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-            .print-header { text-align: center; margin-bottom: 20px; }
-        }
-        .print-only { display: none; }
-
-        /* 🚨 ไม้ตายสุดท้าย: บังคับทุกอย่างให้อยู่ในกรอบ 100% */
-@media (min-width: 1025px) {
-    .calendar-container, .top-navigation {
-        max-width: 1100px !important;
-        margin: 0 auto 20px auto !important;
-        overflow: hidden !important; /* 👈 ห้ามอะไรโผล่ออกมานอกกรอบเด็ดขาด */
+  <style>
+    :root{
+      --primary:#3b82f6;
+      --primary-dark:#1e40af;
+      --success:#10b981;
+      --danger:#ef4444;
+      --glass:rgba(255,255,255,0.4);
+      --border:rgba(255,255,255,0.2);
     }
-}
 
-.calendar-grid {
-    display: grid !important;
-    grid-template-columns: repeat(7, 1fr) !important; /* 👈 บังคับแบ่ง 7 ช่องเท่ากันเป๊ะ */
-    width: 100% !important;
-    box-sizing: border-box !important;
-}
+    body{
+      font-family:'Sarabun',sans-serif;
+      margin:0; padding:20px; min-height:100vh;
+      background-image:linear-gradient(rgba(241,245,249,.3),rgba(241,245,249,.3)),url('images/pa.jpg');
+      background-size:cover;
+      background-position:center;
+      background-attachment:fixed;
+      position:relative;
+    }
 
-.day-cell {
-    min-width: 0 !important;   /* 👈 สำคัญมาก: อนุญาตให้ช่องย่อขนาดได้ */
-    overflow: hidden !important; /* ถ้าเนื้อหาเยอะให้ซ่อน ไม่ให้ดันกรอบ */
-    word-break: break-all !important; /* ถ้าคำยาวเกินให้ตัดขึ้นบรรทัดใหม่ */
-    display: flex;
-    flex-direction: column;
-}
+    body::before{
+      content:"";
+      position:fixed; inset:0;
+      background:inherit;
+      filter:blur(5px);
+      z-index:-1;
+    }
 
-.badge-boss {
-    width: 95% !important;     /* บังคับความกว้างป้ายชื่อ */
-    white-space: nowrap !important; /* ห้ามขึ้นบรรทัดใหม่สำหรับชื่อหลัก */
-    overflow: hidden !important;
-    text-overflow: ellipsis !important; /* ถ้าชื่อยาวเกินให้ขึ้น ... */
-    display: block !important;
-}
+    .top-navigation{
+      max-width:1100px;
+      margin:0 auto 20px auto;
+      display:flex;
+      flex-direction:column;
+      background:var(--primary);
+      padding:25px 30px;
+      border-radius:25px;
+      border:1px solid rgba(255,255,255,0.2);
+      box-shadow:0 10px 25px rgba(59,130,246,0.2);
+      color:#fff;
+      gap:15px;
+      overflow:hidden;
+    }
 
-.controls-wrapper {
-    flex-wrap: wrap !important; /* ถ้าปุ่มเยอะเกินให้ลงมาบรรทัดใหม่ ห้ามดันแถบเมนูทะลุ */
-}
+    .brand-area{display:flex; align-items:center; gap:20px;}
+    .logo-img{width:80px; height:auto; filter:drop-shadow(0 2px 4px rgba(0,0,0,.2));}
+    .brand-text h1{margin:0; font-size:26px; font-weight:700; color:#fff;}
+    .brand-text p{margin:2px 0 0 0; font-size:14px; color:rgba(255,255,255,.9);}
 
-/* ป้องกันรูปภาพหรือ Logo ดันกรอบ */
-.logo-img {
-    max-width: 100%;
-    height: auto;
-}
+    /* ===== Controls layout: [Month] | [Buttons...] ===== */
+    .controls-wrapper{
+      display:flex;
+      align-items:center;
+      gap:16px;
+      width:100%;
+      flex-wrap:wrap;
+      border-top:1px solid rgba(255,255,255,.2);
+      padding-top:15px;
+    }
 
-/* ===== Top Controls Layout (Left month | Right buttons) ===== */
-.controls-wrapper{
-  display:flex;
-  align-items:center;
-  gap:16px;
-  width:100%;
-  flex-wrap:wrap; /* จอเล็กให้ลงบรรทัด */
-}
+    .left-controls{flex:0 0 auto;}
+    #monthSelect{
+      padding:12px 18px;
+      width:190px;                 /* ✅ ขยายช่องเลือกเดือน */
+      border-radius:14px;
+      border:none;
+      font-family:inherit;
+      font-weight:800;
+      font-size:16px;
+      cursor:pointer;
+      color:var(--primary-dark);
+      background:#fff;
+      box-shadow:0 4px 10px rgba(0,0,0,.10);
+    }
 
-/* ฝั่งซ้าย: เดือน */
-.left-controls{
-  flex: 0 0 auto;
-}
+    .divider{
+      width:1px;
+      height:34px;
+      background:rgba(255,255,255,.45);
+      flex:0 0 auto;
+    }
 
-/* ขยาย select เดือน */
-#monthSelect{
-  padding:12px 18px;
-  width:190px;              /* ✅ ขยายตามที่ขอ */
-  border-radius:14px;
-  border:none;
-  font-family:inherit;
-  font-weight:800;
-  font-size:16px;
-  cursor:pointer;
-  color:var(--primary-dark);
-  background:#fff;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.10);
-}
+    .right-controls{
+      display:flex;
+      gap:12px;
+      margin-left:auto;            /* ✅ ดันปุ่มไปขวา */
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
 
-/* เส้นแบ่งกลาง */
-.divider{
-  width:1px;
-  height:34px;
-  background:rgba(255,255,255,0.45);
-  flex:0 0 auto;
-}
+    .btn-nav{
+      padding:11px 18px;
+      border-radius:14px;
+      border:none;
+      font-family:inherit;
+      font-weight:800;
+      font-size:14px;
+      cursor:pointer;
+      transition:all .2s;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      white-space:nowrap;
+      flex-shrink:0;
+      box-shadow:0 6px 14px rgba(0,0,0,.12);
+    }
+    .btn-nav:hover{transform:translateY(-2px); filter:brightness(1.1);}
 
-/* ฝั่งขวา: ปุ่ม */
-.right-controls{
-  display:flex;
-  gap:12px;
-  margin-left:auto;         /* ✅ ดันไปขวาสุด */
-  align-items:center;
-  flex-wrap:wrap;           /* ✅ จอเล็กปุ่มลงบรรทัดเอง */
-  justify-content:flex-end;
-}
+    .btn-kongpan{background:var(--danger)!important; color:#fff;}
+    .btn-spk{background:var(--primary-dark)!important; color:#fff;}
+    .btn-print{background:#f59e0b!important; color:#fff;}
+    .btn-sync-google{background:var(--success)!important; color:#fff;}
 
-/* ให้ปุ่มดูเป็นชุดเดียวกันมากขึ้น */
-.btn-nav{
-  padding:11px 18px;
-  border-radius:14px;
-  font-weight:800;
-  font-size:14px;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.12);
-}
+    .btn-nav.is-active{
+      outline:3px solid rgba(255,255,255,.45);
+      transform:translateY(-1px);
+      filter:brightness(1.05);
+    }
 
-/* ===== Active state (กดแล้วติด) ===== */
-.btn-nav.is-active{
-  outline: 3px solid rgba(255,255,255,0.45);
-  transform: translateY(-1px);
-  filter: brightness(1.05);
-}
+    @media (max-width:640px){
+      #monthSelect{width:100%;}
+      .divider{display:none;}
+      .right-controls{margin-left:0; width:100%; justify-content:flex-start;}
+    }
 
-/* ===== Responsive: จอเล็กให้ divider หาย และจัดเป็นแถว ===== */
-@media (max-width: 640px){
-  #monthSelect{ width: 100%; }
-  .divider{ display:none; }
-  .right-controls{ margin-left:0; width:100%; justify-content:flex-start; }
-}
-    </style>
+    /* ===== Calendar ===== */
+    .calendar-container{
+      max-width:1100px;
+      margin:0 auto;
+      background:var(--glass);
+      backdrop-filter:blur(10px);
+      border-radius:25px;
+      padding:25px;
+      box-shadow:0 5px 20px rgba(0,0,0,.03);
+      border:1px solid var(--border);
+      overflow:hidden;
+    }
+
+    .calendar-grid{
+      display:grid;
+      grid-template-columns:repeat(7, minmax(0, 1fr)); /* ✅ กันบีบ */
+      gap:15px;
+      width:100%;
+      box-sizing:border-box;
+    }
+
+    .weekday{
+      text-align:center;
+      font-weight:700;
+      color:#475569;
+      font-size:16px;
+      padding-bottom:10px;
+    }
+
+    .day-cell{
+      min-height:130px;
+      background:#fff;
+      border-radius:15px;
+      padding:12px;
+      border:1px solid #f1f5f9;
+      transition:.2s;
+      cursor:pointer;
+      display:flex;
+      flex-direction:column;
+      min-width:0;                 /* ✅ สำคัญกันบีบ */
+      overflow:hidden;
+      word-break:break-word;
+    }
+    .day-cell:hover{border-color:var(--primary); background:#f8fafc;}
+
+    .date-number{
+      font-size:17px;
+      font-weight:700;
+      color:#cbd5e1;
+      margin-bottom:8px;
+    }
+
+    .badge-boss{
+      font-size:13px;
+      color:var(--primary-dark);
+      font-weight:700;
+      background:#eef2ff;
+      padding:6px 10px;
+      border-radius:8px;
+      margin-top:4px;
+      border:1px solid #e0e7ff;
+      display:block;
+      width:95%;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .badge-count{
+      font-size:11px;
+      color:#94a3b8;
+      margin-top:auto;
+      font-weight:500;
+    }
+
+    /* ===== Modal ===== */
+    .modal{
+      display:none;
+      position:fixed; inset:0;
+      background:rgba(15,23,42,.7);
+      backdrop-filter:blur(8px);
+      z-index:9999;
+      align-items:center;
+      justify-content:center;
+    }
+    .modal-content{
+      background:#fff;
+      width:90%;
+      max-width:520px;
+      border-radius:25px;
+      overflow:hidden;
+    }
+    .modal-header{
+      background:var(--primary-dark);
+      color:#fff;
+      padding:20px 25px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    .modal-body{
+      padding:15px;
+      max-height:420px;
+      overflow-y:auto;
+    }
+    .duty-item{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:12px;
+      border-bottom:1px solid #f1f5f9;
+      gap:10px;
+    }
+    .btn-del{
+      color:#94a3b8;
+      background:#f1f5f9;
+      border:none;
+      padding:8px 12px;
+      border-radius:10px;
+      cursor:pointer;
+      transition:.2s;
+      flex:0 0 auto;
+    }
+    .btn-del:hover{color:#fff; background:var(--danger);}
+
+    /* Print */
+    @media print{
+      body{background:#fff!important;}
+      .no-print,.top-navigation,.calendar-container,.modal{display:none!important;}
+      .print-only{display:block!important;}
+      table{width:100%; border-collapse:collapse; margin-top:15px;}
+      th,td{border:1px solid #000; padding:10px; text-align:left; font-size:14px;}
+      th{background-color:#eee!important; print-color-adjust:exact; -webkit-print-color-adjust:exact;}
+      .print-header{text-align:center; margin-bottom:20px;}
+    }
+    .print-only{display:none;}
+  </style>
 </head>
-<body>
 
-<div class="top-navigation no-print">
+<body>
+  <div class="top-navigation no-print">
     <div class="brand-area">
-        <img src="images/air.png" alt="Logo" class="logo-img"> 
-        <div class="brand-text">
-            <h1>กองพันทหารอากาศโยธิน รร.การบิน Dashboard</h1>
-            <p id="subtext">ระบบบริหารจัดการและสรุปยอดกำลังพลเข้าเวรรายเดือน</p>
-        </div>
+      <img src="images/air.png" alt="Logo" class="logo-img" />
+      <div class="brand-text">
+        <h1>กองพันทหารอากาศโยธิน รร.การบิน Dashboard</h1>
+        <p id="subtext">ระบบบริหารจัดการและสรุปยอดกำลังพลเข้าเวรรายเดือน</p>
+      </div>
     </div>
 
     <div class="controls-wrapper">
+      <div class="left-controls">
+        <select id="monthSelect" onchange="renderReport(currentGroup)">
+          <option value="1">มกราคม</option>
+          <option value="2">กุมภาพันธ์</option>
+          <option value="3" selected>มีนาคม</option>
+          <option value="4">เมษายน</option>
+          <option value="5">พฤษภาคม</option>
+          <option value="6">มิถุนายน</option>
+          <option value="7">กรกฎาคม</option>
+          <option value="8">สิงหาคม</option>
+          <option value="9">กันยายน</option>
+          <option value="10">ตุลาคม</option>
+          <option value="11">พฤศจิกายน</option>
+          <option value="12">ธันวาคม</option>
+        </select>
+      </div>
 
-  <div class="left-controls">
-    <select id="monthSelect" onchange="renderReport(currentGroup)">
-      <option value="1">มกราคม</option>
-      <option value="2">กุมภาพันธ์</option>
-      <option value="3" selected>มีนาคม</option>
-      <option value="4">เมษายน</option>
-      <option value="5">พฤษภาคม</option>
-      <option value="6">มิถุนายน</option>
-      <option value="7">กรกฎาคม</option>
-      <option value="8">สิงหาคม</option>
-      <option value="9">กันยายน</option>
-      <option value="10">ตุลาคม</option>
-      <option value="11">พฤศจิกายน</option>
-      <option value="12">ธันวาคม</option>
-    </select>
+      <div class="divider" aria-hidden="true"></div>
+
+      <div class="right-controls">
+        <button id="btnKongpan" class="btn-nav btn-kongpan" onclick="renderReport('กองพัน')">
+          <i class="fas fa-users"></i> เวรกองพัน
+        </button>
+
+        <button id="btnSpk" class="btn-nav btn-spk" onclick="renderReport('ศปก.')">
+          <i class="fas fa-shield-alt"></i> เวร ศปก.
+        </button>
+
+        <button class="btn-nav btn-print" onclick="prepareAndPrint()">
+          <i class="fas fa-print"></i> พิมพ์รายงาน
+        </button>
+
+        <button id="syncBtn" class="btn-nav btn-sync-google" onclick="syncAllToGoogle()">
+          <i class="fab fa-google"></i> Sync
+        </button>
+      </div>
+    </div>
   </div>
 
-  <div class="divider" aria-hidden="true"></div>
-
-  <div class="right-controls">
-    <button id="btnKongpan" class="btn-nav btn-kongpan" onclick="renderReport('กองพัน')">
-      <i class="fas fa-users"></i> เวรกองพัน
-    </button>
-
-    <button id="btnSpk" class="btn-nav btn-spk" onclick="renderReport('ศปก.')">
-      <i class="fas fa-shield-alt"></i> เวร ศปก.
-    </button>
-
-    <button class="btn-nav btn-print" onclick="prepareAndPrint()">
-      <i class="fas fa-print"></i> พิมพ์รายงาน
-    </button>
-
-    <button id="syncBtn" class="btn-nav btn-sync-google" onclick="syncAllToGoogle()">
-      <i class="fab fa-google"></i> Sync
-    </button>
-  </div>
-
-</div>
-
-<div class="calendar-container no-print">
+  <div class="calendar-container no-print">
     <div class="calendar-grid">
-        <div class="weekday">อา.</div><div class="weekday">จ.</div><div class="weekday">อ.</div>
-        <div class="weekday">พ.</div><div class="weekday">พฤ.</div><div class="weekday">ศ.</div><div class="weekday">ส.</div>
+      <div class="weekday">อา.</div><div class="weekday">จ.</div><div class="weekday">อ.</div>
+      <div class="weekday">พ.</div><div class="weekday">พฤ.</div><div class="weekday">ศ.</div><div class="weekday">ส.</div>
     </div>
     <div class="calendar-grid" id="calendarBody"></div>
-</div>
+  </div>
 
-<div id="printSection" class="print-only">
+  <div id="printSection" class="print-only">
     <div class="print-header">
-        <h2 id="printTitle">สรุปตารางเวรแบบปฏิทิน</h2>
-        <p id="printSubTitle"></p>
+      <h2 id="printTitle">สรุปตารางเวรแบบปฏิทิน</h2>
+      <p id="printSubTitle"></p>
     </div>
     <table>
-        <thead>
-            <tr>
-                <th>ยศ ชื่อ สกุล</th>
-                <th>หน้าที่</th>
-                <th>วันที่เข้าเวร</th>
-            </tr>
-        </thead>
-        <tbody id="printTableBody"></tbody>
+      <thead>
+        <tr>
+          <th>ยศ ชื่อ สกุล</th>
+          <th>หน้าที่</th>
+          <th>วันที่เข้าเวร</th>
+        </tr>
+      </thead>
+      <tbody id="printTableBody"></tbody>
     </table>
-</div>
+  </div>
 
-<div id="dutyModal" class="modal">
+  <!-- Modal -->
+  <div id="dutyModal" class="modal">
     <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="modalTitle" style="margin:0; font-size: 18px;">รายชื่อผู้เข้าเวร</h3>
-            <span style="cursor:pointer; font-size:30px; line-height: 1;" onclick="closeModal()">&times;</span>
-        </div>
-        <div id="modalBody" class="modal-body"></div>
-        <div style="padding:15px; border-top: 1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:10px;">
-    <!-- ซ้ายล่าง: ปุ่มซิงค์วันนั้น -->
-    <button id="syncModalBtn" class="btn-nav btn-sync-google" style="background: var(--success); color:white;"
-            onclick="syncModalDay()">
-        <i class="fas fa-calendar-check"></i> ซิงค์วันนี้ในปฏิทิน
-    </button>
+      <div class="modal-header">
+        <h3 id="modalTitle" style="margin:0; font-size:18px;">รายชื่อผู้เข้าเวร</h3>
+        <span style="cursor:pointer; font-size:30px; line-height:1;" onclick="closeModal()">&times;</span>
+      </div>
 
-    <!-- ขวาล่าง: ปิด -->
-    <button class="btn-nav" style="background:#64748b; color:white;" onclick="closeModal()">
-        ปิดหน้าต่าง
-    </button>
-</div>
+      <div id="modalBody" class="modal-body"></div>
+
+      <div style="padding:15px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <button id="syncModalBtn" class="btn-nav btn-sync-google" onclick="syncModalDay()">
+          <i class="fas fa-calendar-check"></i> ซิงค์วันในป๊อปอัพ
+        </button>
+
+        <button class="btn-nav" style="background:#64748b; color:#fff;" onclick="closeModal()">
+          ปิดหน้าต่าง
+        </button>
+      </div>
     </div>
-</div>
+  </div>
 
-<script>
-  let currentModalDate = null; // YYYY-MM-DD ของวันที่ที่เปิด popup อยู่
-  let currentGroup = "กองพัน";
-  let fullData = {};
+  <script>
+    let currentModalDate = null;   // YYYY-MM-DD ของวันที่ใน popup
+    let currentGroup = "กองพัน";
+    let fullData = {};            // { dayNumber: [rows...] }
 
-  const getRole = (x) => (x.role_type || x.role || "");
+    // ✅ อ่านหน้าที่ให้รองรับหลาย schema (role_type เป็นหลัก)
+    const getRole = (x) => {
+      const v = x?.role_type ?? x?.role ?? x?.role_name ?? "";
+      return String(v || "").trim();
+    };
 
+    function setActiveGroupButton(group){
+      const k = document.getElementById("btnKongpan");
+      const s = document.getElementById("btnSpk");
+      if (!k || !s) return;
 
-  async function renderReport(group) {
-    currentGroup = group;
-    setActiveGroupButton(group);
-    
-    const month = Number(document.getElementById("monthSelect").value);
-    const monthLabel =
-      document.getElementById("monthSelect").options[
-        document.getElementById("monthSelect").selectedIndex
-      ].text;
+      k.classList.remove("is-active");
+      s.classList.remove("is-active");
 
-    const currentYear = 2026;
-    document.getElementById(
-      "subtext"
-    ).innerText = `กลุ่มงาน: ${group} | ประจำเดือน ${monthLabel} ${currentYear + 543}`;
-
-    try {
-      const g = encodeURIComponent(group);
-      const resCal = await fetch(
-        `/get-report-calendar?month=${month}&year=${currentYear}&group=${g}`,
-        { cache: "no-store" }
-      );
-
-      const text = await resCal.text();
-      if (!resCal.ok) throw new Error(text || "API error");
-
-      const dataCal = JSON.parse(text);
-
-      fullData = {};
-      dataCal.forEach((item) => {
-
-  const d = parseInt(item.shift_date.substring(8,10));
-
-  if(!fullData[d]) fullData[d] = [];
-  fullData[d].push(item);
-
-});
-
-      const firstDay = new Date(currentYear, month - 1, 1).getDay();
-      const daysInMonth = new Date(currentYear, month, 0).getDate();
-
-      const body = document.getElementById("calendarBody");
-      body.innerHTML = "";
-
-      for (let i = 0; i < firstDay; i++) body.innerHTML += `<div></div>`;
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        let html = `<span class="date-number">${d}</span>`;
-
-        if (fullData[d]) {
-          const sortedDayData = [...fullData[d]].sort((a, b) => {
-            const ar = getRole(a);
-            const br = getRole(b);
-            if (ar.includes("นายทหารเวร")) return -1;
-            if (br.includes("นายทหารเวร")) return 1;
-            return 0;
-          });
-
-          const boss = sortedDayData[0];
-          html += `<div class="badge-boss">⭐ ${boss.rank_name}</div>`;
-
-          if (fullData[d].length > 1)
-            html += `<div class="badge-count">และอื่นๆ อีก ${
-              fullData[d].length - 1
-            } นาย</div>`;
-        }
-
-        body.innerHTML += `<div class="day-cell" onclick="openModal(${d})">${html}</div>`;
-      }
-    } catch (e) {
-      console.error("REPORT ERROR:", e);
-      alert("❌ โหลดรายงานไม่สำเร็จ (เปิด F12 → Console ดูรายละเอียด)");
+      if (String(group).includes("ศปก")) s.classList.add("is-active");
+      else k.classList.add("is-active");
     }
-  }
 
-  function prepareAndPrint() {
-    const monthLabel =
-      document.getElementById("monthSelect").options[
-        document.getElementById("monthSelect").selectedIndex
-      ].text;
+    // ✅ ดึงปีจากข้อมูลจริง: ตอนนี้นายทำงานที่ 2026 -> fix ให้ชัวร์
+    const FIX_YEAR = 2026;
 
-    const year = new Date().getFullYear();
-    document.getElementById(
-      "printSubTitle"
-    ).innerText = `กลุ่มงาน: ${currentGroup} | ประจำเดือน ${monthLabel} ${year + 543}`;
+    async function renderReport(group){
+      currentGroup = group;
+      setActiveGroupButton(group);
 
-    const body = document.getElementById("printTableBody");
-    body.innerHTML = "";
+      const month = Number(document.getElementById("monthSelect").value);
+      const monthLabel = document.getElementById("monthSelect").options[document.getElementById("monthSelect").selectedIndex].text;
+      const year = FIX_YEAR;
 
-    const summary = {};
-    Object.keys(fullData).forEach((day) => {
-      fullData[day].forEach((item) => {
-        let roleDisplay = getRole(item);
+      document.getElementById("subtext").innerText =
+        `กลุ่มงาน: ${group} | ประจำเดือน ${monthLabel} ${year + 543}`;
 
-        // เฉพาะเวรวิทยุเท่านั้นที่แสดงผลัด
-        if (roleDisplay === "เวรวิทยุ" && item.shift_turn) {
-          roleDisplay = `${roleDisplay} (${item.shift_turn})`;
+      try{
+        const res = await fetch(`/get-report-calendar?month=${month}&year=${year}&group=${encodeURIComponent(group)}`, { cache:"no-store" });
+        const text = await res.text();
+        if (!res.ok) throw new Error(text || "API error");
+
+        const dataCal = JSON.parse(text);
+
+        fullData = {};
+        dataCal.forEach((item) => {
+          // ✅ item.shift_date เป็น "2026-03-15T00:00:00.000Z" -> ดึงวันแบบชัวร์
+          const day = parseInt(String(item.shift_date).substring(8, 10), 10);
+          if (!fullData[day]) fullData[day] = [];
+          fullData[day].push(item);
+        });
+
+        const firstDay = new Date(year, month - 1, 1).getDay();
+        const daysInMonth = new Date(year, month, 0).getDate();
+
+        const body = document.getElementById("calendarBody");
+        body.innerHTML = "";
+
+        for (let i = 0; i < firstDay; i++) body.innerHTML += `<div></div>`;
+
+        for (let d = 1; d <= daysInMonth; d++){
+          let html = `<span class="date-number">${d}</span>`;
+
+          if (fullData[d] && fullData[d].length){
+            const sortedDayData = [...fullData[d]].sort((a,b) => {
+              const ar = getRole(a);
+              const br = getRole(b);
+              if (ar.includes("นายทหารเวร")) return -1;
+              if (br.includes("นายทหารเวร")) return 1;
+              return 0;
+            });
+
+            const boss = sortedDayData[0];
+            const bossName = boss.rank_name || boss.name || "(ไม่ระบุชื่อ)";
+            html += `<div class="badge-boss">⭐ ${bossName}</div>`;
+
+            if (fullData[d].length > 1){
+              html += `<div class="badge-count">และอื่นๆ อีก ${fullData[d].length - 1} นาย</div>`;
+            }
+          }
+
+          body.innerHTML += `<div class="day-cell" onclick="openModal(${d})">${html}</div>`;
         }
+      }catch(e){
+        console.error("REPORT ERROR:", e);
+        alert("❌ โหลดรายงานไม่สำเร็จ (เปิด F12 → Console ดูรายละเอียด)");
+      }
+    }
 
-        const key = `${item.rank_name}-${roleDisplay}`;
-        if (!summary[key])
-          summary[key] = { name: item.rank_name, role: roleDisplay, days: [] };
+    function openModal(day){
+      const month = Number(document.getElementById("monthSelect").value);
+      const monthName = document.getElementById("monthSelect").options[document.getElementById("monthSelect").selectedIndex].text;
+      const year = FIX_YEAR;
 
-        summary[key].days.push(parseInt(day, 10));
-      });
-    });
+      document.getElementById("modalTitle").innerText = `วันที่ ${day} ${monthName}`;
 
-    const sortedPeople = Object.values(summary).sort((a, b) => {
-  if ((a.role || "").includes("นายทหารเวร")) return -1;
-  if ((b.role || "").includes("นายทหารเวร")) return 1;
-  return 0;
-});
-  
-    sortedPeople.forEach((p) => {
-      body.innerHTML += `<tr>
-        <td>${p.name}</td>
-        <td>${p.role}</td>
-        <td>${p.days.sort((x,y)=>x-y).join(", ")}</td>
-      </tr>`;
-    });
+      const mm = String(month).padStart(2, "0");
+      const dd = String(day).padStart(2, "0");
+      currentModalDate = `${year}-${mm}-${dd}`;
 
-    window.print();
-  }
+      const syncBtn = document.getElementById("syncModalBtn");
+      if (syncBtn) syncBtn.innerHTML = `<i class="fas fa-calendar-check"></i> ซิงค์ ${currentModalDate}`;
 
-  function openModal(day) {
-    const monthName =
-      document.getElementById("monthSelect").options[
-        document.getElementById("monthSelect").selectedIndex
-      ].text;
+      const body = document.getElementById("modalBody");
 
-    document.getElementById("modalTitle").innerText = `วันที่ ${day} ${monthName}`;
-    
-    // ✅ คำนวณ YYYY-MM-DD จากเดือน/ปีที่เลือก
-const month = Number(document.getElementById("monthSelect").value);
-const year = new Date().getFullYear(); // ถ้าเพื่อน fix 2026 ก็เปลี่ยนเป็น 2026
-const mm = String(month).padStart(2, "0");
-const dd = String(day).padStart(2, "0");
-currentModalDate = `${year}-${mm}-${dd}`;
+      if (!fullData[day] || !fullData[day].length){
+        body.innerHTML = '<p style="text-align:center; padding:30px;">ไม่มีข้อมูล</p>';
+      }else{
+        const sortedEntries = [...fullData[day]].sort((a,b) => {
+          const ar = getRole(a);
+          const br = getRole(b);
+          if (ar.includes("นายทหารเวร")) return -1;
+          if (br.includes("นายทหารเวร")) return 1;
+          return 0;
+        });
 
-// อัปเดตข้อความบนปุ่มให้ชัด
-const b = document.getElementById("syncModalBtn");
-if (b) b.innerHTML = `<i class="fas fa-calendar-check"></i> ซิงค์ ${currentModalDate}`;
+        body.innerHTML = sortedEntries.map((d) => {
+          const name = d.rank_name || d.name || "(ไม่ระบุชื่อ)";
+          let roleDisplay = getRole(d) || "(ไม่ระบุหน้าที่)";
 
-    const body = document.getElementById("modalBody");
-
-    if (!fullData[day]) {
-      body.innerHTML = '<p style="text-align:center; padding:30px;">ไม่มีข้อมูล</p>';
-    } else {
-      const sortedEntries = [...fullData[day]].sort((a, b) => {
-        const ar = getRole(a);
-        const br = getRole(b);
-        if (ar.includes("นายทหารเวร")) return -1;
-        if (br.includes("นายทหารเวร")) return 1;
-        return 0;
-      });
-
-      body.innerHTML = sortedEntries
-        .map((d) => {
-          let roleDisplay = getRole(d);
-          if (roleDisplay === "เวรวิทยุ" && d.shift_turn) {
+          if (roleDisplay === "เวรวิทยุ" && d.shift_turn){
             roleDisplay = `${roleDisplay} (${d.shift_turn})`;
           }
-          return `<div class="duty-item">
-            <div><b>${d.rank_name}</b><br><small>${roleDisplay}</small></div>
-            <button class="btn-del" onclick="deleteEntry(${d.id}, '${d.rank_name}', ${day})">ลบ</button>
-          </div>`;
-        })
-        .join("");
+
+          const safeName = JSON.stringify(name);
+
+          return `
+            <div class="duty-item">
+              <div>
+                <b>${name}</b><br>
+                <small>${roleDisplay}</small>
+              </div>
+              <button class="btn-del" onclick="deleteEntry(${d.id}, ${safeName}, ${day})">ลบ</button>
+            </div>
+          `;
+        }).join("");
+      }
+
+      document.getElementById("dutyModal").style.display = "flex";
     }
 
-    document.getElementById("dutyModal").style.display = "flex";
-  }
-
-  async function deleteEntry(id, name, day) {
-    if (!confirm(`ลบ ${name}?`)) return;
-    const res = await fetch(`/delete-shift/${id}`, { method: "DELETE" });
-    if (res.ok) {
-      await renderReport(currentGroup);
-      closeModal();
-    } else {
-      alert("❌ ลบไม่สำเร็จ");
+    async function deleteEntry(id, name, day){
+      if (!confirm(`ลบ ${name}?`)) return;
+      const res = await fetch(`/delete-shift/${id}`, { method:"DELETE" });
+      if (res.ok){
+        await renderReport(currentGroup);
+        closeModal();
+      }else{
+        alert("❌ ลบไม่สำเร็จ");
+      }
     }
-  }
 
-  function closeModal() {
-    document.getElementById("dutyModal").style.display = "none";
-  }
-  window.onclick = (e) => {
-    if (e.target == document.getElementById("dutyModal")) closeModal();
-  };
-
-  async function syncAllToGoogle() {
-    const btn = document.getElementById("syncBtn");
-    const month = Number(document.getElementById("monthSelect").value);
-    const year = new Date().getFullYear();
-    const group = currentGroup;
-
-    if (!confirm(`ต้องการซิงค์เวร ${group} เดือนนี้เข้า Google Calendar หรือไม่?`)) return;
-
-    btn.disabled = true;
-    btn.innerHTML = "⏳ กำลังซิงค์...";
-
-    try {
-      const res = await fetch(
-        `/sync-existing-shifts?month=${month}&year=${year}&group=${encodeURIComponent(group)}`,
-        { method: "POST" }
-      );
-      const data = await res.json();
-      if (res.ok) alert(`✅ ${data.message}`);
-      else alert("❌ Sync ไม่สำเร็จ");
-    } catch (err) {
-      console.error(err);
-      alert("❌ Server Error");
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = "<i class='fab fa-google'></i> ซิงค์ Google Calendar";
+    function closeModal(){
+      document.getElementById("dutyModal").style.display = "none";
     }
-  }
 
-  async function syncToday() {
-    const btn = document.getElementById("syncTodayBtn");
-    if (!confirm("ต้องการซิงค์เวรของวันนี้เข้า Google Calendar หรือไม่?")) return;
+    window.onclick = (e) => {
+      if (e.target === document.getElementById("dutyModal")) closeModal();
+    };
 
-    btn.disabled = true;
-    btn.innerHTML = "⏳ กำลังซิงค์...";
+    function prepareAndPrint(){
+      const monthLabel = document.getElementById("monthSelect").options[document.getElementById("monthSelect").selectedIndex].text;
+      const year = FIX_YEAR;
 
-    try {
-      const res = await fetch(`/sync-today`, { method: "POST" });
-      const data = await res.json();
-      if (res.ok) alert(`✅ ${data.message}`);
-      else alert("❌ Sync ไม่สำเร็จ");
-    } catch (err) {
-      console.error(err);
-      alert("❌ Server Error");
-    } finally {
-      btn.disabled = false;
-      btn.innerHTML = "<i class='fas fa-bolt'></i> ซิงค์เวรวันนี้";
+      document.getElementById("printSubTitle").innerText =
+        `กลุ่มงาน: ${currentGroup} | ประจำเดือน ${monthLabel} ${year + 543}`;
+
+      const body = document.getElementById("printTableBody");
+      body.innerHTML = "";
+
+      const summary = {};
+      Object.keys(fullData).forEach((day) => {
+        fullData[day].forEach((item) => {
+          let roleDisplay = getRole(item) || "(ไม่ระบุหน้าที่)";
+
+          if (roleDisplay === "เวรวิทยุ" && item.shift_turn){
+            roleDisplay = `${roleDisplay} (${item.shift_turn})`;
+          }
+
+          const name = item.rank_name || item.name || "(ไม่ระบุชื่อ)";
+          const key = `${name}-${roleDisplay}`;
+
+          if (!summary[key]) summary[key] = { name, role: roleDisplay, days: [] };
+          summary[key].days.push(parseInt(day, 10));
+        });
+      });
+
+      const sortedPeople = Object.values(summary).sort((a,b) => {
+        if (String(a.role).includes("นายทหารเวร")) return -1;
+        if (String(b.role).includes("นายทหารเวร")) return 1;
+        return a.name.localeCompare(b.name, "th");
+      });
+
+      sortedPeople.forEach((p) => {
+        body.innerHTML += `
+          <tr>
+            <td>${p.name}</td>
+            <td>${p.role}</td>
+            <td>${p.days.sort((x,y)=>x-y).join(", ")}</td>
+          </tr>
+        `;
+      });
+
+      window.print();
     }
-  }
 
-  // ตั้งค่า default วันที่เป็น "วันนี้" เวลาเปิดหน้า report
-(function setDefaultSyncDate(){
-  const el = document.getElementById("syncDate");
-  if (!el) return;
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, "0");
-  const dd = String(today.getDate()).padStart(2, "0");
-  el.value = `${yyyy}-${mm}-${dd}`;
-})();
+    async function syncAllToGoogle(){
+      const btn = document.getElementById("syncBtn");
+      const month = Number(document.getElementById("monthSelect").value);
+      const year = FIX_YEAR;
+      const group = currentGroup;
 
-async function syncSelectedDate() {
-  const btn = document.getElementById("syncDateBtn");
-  const date = document.getElementById("syncDate")?.value;
+      if (!confirm(`ต้องการซิงค์เวร ${group} เดือนนี้เข้า Google Calendar หรือไม่?`)) return;
 
-  if (!date) {
-    alert("❌ กรุณาเลือกวันที่ที่จะซิงค์ก่อน");
-    return;
-  }
+      btn.disabled = true;
+      const old = btn.innerHTML;
+      btn.innerHTML = "⏳ กำลังซิงค์...";
 
-  if (!confirm(`ต้องการซิงค์เวรวันที่ ${date} เข้า Google Calendar หรือไม่?`)) return;
-
-  btn.disabled = true;
-  btn.innerHTML = "⏳ กำลังซิงค์...";
-
-  try {
-    const res = await fetch(`/sync-date`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date })
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-      alert(`✅ ${data.message}`);
-    } else {
-      alert(`❌ Sync ไม่สำเร็จ: ${data.error || "unknown error"}`);
+      try{
+        const res = await fetch(`/sync-existing-shifts?month=${month}&year=${year}&group=${encodeURIComponent(group)}`, { method:"POST" });
+        const data = await res.json();
+        if (res.ok) alert(`✅ ${data.message}`);
+        else alert(`❌ Sync ไม่สำเร็จ: ${data.error || "unknown"}`);
+      }catch(err){
+        console.error(err);
+        alert("❌ Server Error");
+      }finally{
+        btn.disabled = false;
+        btn.innerHTML = old;
+      }
     }
-  } catch (err) {
-    console.error(err);
-    alert("❌ Server Error");
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = "<i class='fas fa-calendar-check'></i> ซิงค์ตามวันที่เลือก";
-  }
-}
 
-async function syncModalDay() {
-  if (!currentModalDate) {
-    alert("❌ ไม่พบวันที่สำหรับซิงค์");
-    return;
-  }
+    async function syncModalDay(){
+      if (!currentModalDate){
+        alert("❌ ไม่พบวันที่สำหรับซิงค์");
+        return;
+      }
 
-  const btn = document.getElementById("syncModalBtn");
-  if (!confirm(`ต้องการซิงค์เวรวันที่ ${currentModalDate} เข้า Google Calendar หรือไม่?`)) return;
+      const btn = document.getElementById("syncModalBtn");
+      const oldHtml = btn.innerHTML;
 
-  btn.disabled = true;
-  const oldHtml = btn.innerHTML;
-  btn.innerHTML = "⏳ กำลังซิงค์...";
+      if (!confirm(`ต้องการซิงค์เวรวันที่ ${currentModalDate} เข้า Google Calendar หรือไม่?`)) return;
 
-  try {
-    const res = await fetch("/sync-date", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: currentModalDate })
-    });
+      btn.disabled = true;
+      btn.innerHTML = "⏳ กำลังซิงค์...";
 
-    const data = await res.json();
-    if (res.ok) alert(`✅ ${data.message}`);
-    else alert(`❌ Sync ไม่สำเร็จ: ${data.error || "unknown error"}`);
-  } catch (err) {
-    console.error(err);
-    alert("❌ Server Error");
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = oldHtml;
-  }
-}
+      try{
+        const res = await fetch("/sync-date", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify({ date: currentModalDate })
+        });
 
-function setActiveGroupButton(group){
-  const k = document.getElementById("btnKongpan");
-  const s = document.getElementById("btnSpk");
-  if (!k || !s) return;
+        const data = await res.json();
+        if (res.ok) alert(`✅ ${data.message}`);
+        else alert(`❌ Sync ไม่สำเร็จ: ${data.error || "unknown"}`);
+      }catch(err){
+        console.error(err);
+        alert("❌ Server Error");
+      }finally{
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+      }
+    }
 
-  k.classList.remove("is-active");
-  s.classList.remove("is-active");
-
-  if (String(group).includes("ศปก")) s.classList.add("is-active");
-  else k.classList.add("is-active");
-}
-
-  // ✅ เริ่มต้น
-  setActiveGroupButton("กองพัน");
-renderReport("กองพัน");
-</script>
+    // ✅ เริ่มต้น
+    setActiveGroupButton("กองพัน");
+    renderReport("กองพัน");
+  </script>
 </body>
 </html>
