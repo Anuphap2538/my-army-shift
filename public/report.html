@@ -476,13 +476,26 @@
       if (!fullData[day] || !fullData[day].length){
         body.innerHTML = '<p style="text-align:center; padding:30px;">ไม่มีข้อมูล</p>';
       }else{
-        const sortedEntries = [...fullData[day]].sort((a,b) => {
-          const ar = getRole(a);
-          const br = getRole(b);
-          if (ar.includes("นายทหารเวร")) return -1;
-          if (br.includes("นายทหารเวร")) return 1;
-          return 0;
-        });
+        const sortedEntries = [...fullData[day]].sort((a, b) => {
+
+  const ar = getRole(a);
+  const br = getRole(b);
+
+  // 1️⃣ นายทหารเวรอยู่บนสุด
+  if (ar.includes("นายทหารเวร")) return -1;
+  if (br.includes("นายทหารเวร")) return 1;
+
+  // 2️⃣ ถ้าเป็นเวรวิทยุทั้งคู่ → เรียงตามผลัด
+  if (ar.includes("เวรวิทยุ") && br.includes("เวรวิทยุ")) {
+    return (a.shift_turn || 0) - (b.shift_turn || 0);
+  }
+
+  // 3️⃣ ถ้าเป็นเวรวิทยุอย่างเดียว → ให้เวรวิทยุขึ้นก่อนเวรอื่น
+  if (ar.includes("เวรวิทยุ")) return -1;
+  if (br.includes("เวรวิทยุ")) return 1;
+
+  return 0;
+});
 
         body.innerHTML = sortedEntries.map((d) => {
           const name = d.rank_name || d.name || "(ไม่ระบุชื่อ)";
