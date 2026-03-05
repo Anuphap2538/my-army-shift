@@ -543,9 +543,13 @@
         fullData[day].forEach((item) => {
           let roleDisplay = getRole(item) || "(ไม่ระบุหน้าที่)";
 
-          if (roleDisplay === "เวรวิทยุ" && item.shift_turn){
-            roleDisplay = `${roleDisplay} (${item.shift_turn})`;
-          }
+// ✅ เฉพาะตอนพิมพ์: เวรวิทยุรวมผลัด ไม่ต้องแสดง (1)/(2)
+if (roleDisplay === "เวรวิทยุ") {
+  roleDisplay = "เวรวิทยุ";
+} else {
+  // หน้าที่อื่น ๆ ถ้าอยากโชว์ผลัด (มีแค่เวรวิทยุที่มีผลัดอยู่แล้ว) ก็ไม่ต้องทำอะไรเพิ่ม
+  // ปล่อยไว้ตามเดิม
+}
 
           const name = item.rank_name || item.name || "(ไม่ระบุชื่อ)";
           const key = `${name}-${roleDisplay}`;
