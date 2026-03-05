@@ -154,8 +154,8 @@
     if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
     
     scheduleData[dateStr].push({ 
-        // ถ้าไม่มีชื่อยศจาก JOIN ให้เอาประเภทเวรมาโชว์เป็นชื่อแทน หรือบอกเลข ID
-        name: s.rank_name || `${s.role_type} (ID:${s.user_id})`, 
+        // ถ้า u.rank_name เป็น NULL ให้เอาค่า s.role_type มาแสดงแทน (เช่น "เวรวิทยุ")
+        name: s.rank_name || s.role_type || "เจ้าหน้าที่เวร", 
         role: s.role_type 
     });
 });
