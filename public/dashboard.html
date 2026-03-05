@@ -154,7 +154,7 @@
     const year = d.getUTCFullYear();
     const month = String(d.getUTCMonth() + 1).padStart(2, '0');
     const day = String(d.getUTCDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`; 
+    const dateStr = s.shift_date.split('T')[0]; 
     
     if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
     
@@ -207,19 +207,12 @@
 const isMe = duties.some(d => d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, ''));
 
 if (isMe) {
-    cell.classList.add('duty-active'); // สีน้ำเงินเด่นๆ (เวรเรา)
+    cell.classList.add('duty-active'); // เวรเราขึ้นแถบน้ำเงิน
 } else if (duties.length > 0) {
-    // --- จุดเปลี่ยนโลก: ถ้ามีเวรคนอื่น (เช่น เวรวิทยุ) ให้ระบายสีฟ้าอ่อนทั้งช่อง ---
-    cell.style.backgroundColor = '#f0f4ff'; 
-    cell.style.border = '1px solid #d1e3ff';
-    
-    // ใส่ข้อความบอกจำนวนเวรด้านล่างเลขวันที่
-    const dutyTag = document.createElement('div');
-    dutyTag.style.fontSize = '9px';
-    dutyTag.style.color = '#3b82f6';
-    dutyTag.style.fontWeight = 'bold';
-    dutyTag.innerText = `เวร (${duties.length})`; 
-    cell.appendChild(dutyTag);
+    // ถ้ามีเวรอื่น (เช่น เวรวิทยุเพื่อน) ให้ขึ้นจุดใต้เลขวันที่
+    const dot = document.createElement('div');
+    dot.className = 'duty-dot'; 
+    cell.appendChild(dot);
 }
 
             cell.onclick = () => showInfo(i, dateStr, holidayName, duties);
