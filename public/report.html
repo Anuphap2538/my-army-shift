@@ -222,13 +222,7 @@
             <i class="fas fa-print"></i> พิมพ์รายงาน
         </button>
         
-        <button id="syncTodayBtn" class="btn-nav btn-sync-google" onclick="syncToday()">
-<i class="fas fa-bolt"></i> ซิงค์เวรวันนี้
-</button>
-
-<button id="syncBtn" class="btn-nav btn-sync-google" onclick="syncAllToGoogle()">
-<i class="fab fa-google"></i> ซิงค์ Google Calendar
-</button>
+        
            
     </div>
 </div>
@@ -272,190 +266,245 @@
 </div>
 
 <script>
-    let currentGroup = 'กองพัน';
-    let fullData = {};
+  let currentGroup = "กองพัน";
+  let fullData = {};
 
-    async function renderReport(group) {
-        currentGroup = group;
-        const month = document.getElementById('monthSelect').value;
-        const monthLabel = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
-        const currentYear = 2026;
-        document.getElementById('subtext').innerText = `กลุ่มงาน: ${group} | ประจำเดือน ${monthLabel} ${currentYear + 543}`;
+  const normGroup = (g) => String(g || "").trim().replace("ศปก.", "ศปก");
+  const getRole = (x) => (x.role_type || x.role || "");
 
-        try {
-            const resCal = await fetch(`/get-report-calendar?month=${month}&year=${currentYear}&group=${group}`);
-            const dataCal = await resCal.json();
-            fullData = {};
-            dataCal.forEach(item => {
-                const d = new Date(item.shift_date).getDate();
-                if(!fullData[d]) fullData[d] = [];
-                fullData[d].push(item);
-            });
 
-            const firstDay = new Date(currentYear, month - 1, 1).getDay();
-            const daysInMonth = new Date(currentYear, month, 0).getDate();
-            const body = document.getElementById('calendarBody');
-            body.innerHTML = '';
-            for (let i = 0; i < firstDay; i++) body.innerHTML += `<div></div>`;
-            for (let d = 1; d <= daysInMonth; d++) {
-                let html = `<span class="date-number">${d}</span>`;
-                if(fullData[d]) {
-                    const sortedDayData = [...fullData[d]].sort((a, b) => {
-                        if (a.role.includes("นายทหารเวร")) return -1;
-                        if (b.role.includes("นายทหารเวร")) return 1;
-                        return 0;
-                    });
-                    const boss = sortedDayData[0];
-                    html += `<div class="badge-boss">⭐ ${boss.rank_name}</div>`;
-                    if(fullData[d].length > 1) html += `<div class="badge-count">และอื่นๆ อีก ${fullData[d].length - 1} นาย</div>`;
-                }
-                body.innerHTML += `<div class="day-cell" onclick="openModal(${d})">${html}</div>`;
-            }
-        } catch (e) { console.error(e); }
-    }
+  async function renderReport(group) {
+    currentGroup = group;
 
-    function prepareAndPrint() {
-        const monthLabel = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
-        document.getElementById('printSubTitle').innerText = `กลุ่มงาน: ${currentGroup} | ประจำเดือน ${monthLabel} 2569`;
-        const body = document.getElementById('printTableBody');
-        if (!body) return;
-        body.innerHTML = '';
-        const summary = {};
-        Object.keys(fullData).forEach(day => {
-            fullData[day].forEach(item => {
-                let roleDisplay = item.role;
-                // ล็อคเป้า: เฉพาะ "เวรวิทยุ" เท่านั้นที่มีวงเล็บ
-                if (item.role === "เวรวิทยุ" && item.shift_turn) {
-                    roleDisplay = `${item.role} (${item.shift_turn})`;
-                }
-                const key = `${item.rank_name}-${roleDisplay}`;
-                if (!summary[key]) summary[key] = { name: item.rank_name, role: roleDisplay, days: [] };
-                summary[key].days.push(parseInt(day));
-            });
-        });
-        const sortedPeople = Object.values(summary).sort((a, b) => {
-            if (a.role.includes("นายทหารเวร")) return -1;
-            if (b.role.includes("นายทหารเวร")) return 1;
+    const month = Number(document.getElementById("monthSelect").value);
+    const monthLabel =
+      document.getElementById("monthSelect").options[
+        document.getElementById("monthSelect").selectedIndex
+      ].text;
+
+    const currentYear = new Date().getFullYear(); // ✅ ไม่ fix 2026
+    document.getElementById(
+      "subtext"
+    ).innerText = `กลุ่มงาน: ${group} | ประจำเดือน ${monthLabel} ${currentYear + 543}`;
+
+    try {
+      const g = encodeURIComponent(group);
+      const resCal = await fetch(
+        `/get-report-calendar?month=${month}&year=${currentYear}&group=${g}`,
+        { cache: "no-store" }
+      );
+
+      const text = await resCal.text();
+      if (!resCal.ok) throw new Error(text || "API error");
+
+      const dataCal = JSON.parse(text);
+
+      fullData = {};
+      dataCal.forEach((item) => {
+        // ✅ กัน timezone เพี้ยน: ใช้วันที่จาก string ถ้ามาเป็น YYYY-MM-DD
+        const dateObj =
+          typeof item.shift_date === "string"
+            ? new Date(item.shift_date + "T00:00:00")
+            : new Date(item.shift_date);
+
+        const d = dateObj.getDate();
+        if (!fullData[d]) fullData[d] = [];
+        fullData[d].push(item);
+      });
+
+      const firstDay = new Date(currentYear, month - 1, 1).getDay();
+      const daysInMonth = new Date(currentYear, month, 0).getDate();
+
+      const body = document.getElementById("calendarBody");
+      body.innerHTML = "";
+
+      for (let i = 0; i < firstDay; i++) body.innerHTML += `<div></div>`;
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        let html = `<span class="date-number">${d}</span>`;
+
+        if (fullData[d]) {
+          const sortedDayData = [...fullData[d]].sort((a, b) => {
+            const ar = getRole(a);
+            const br = getRole(b);
+            if (ar.includes("นายทหารเวร")) return -1;
+            if (br.includes("นายทหารเวร")) return 1;
             return 0;
-        });
-        sortedPeople.forEach(person => {
-            const row = `<tr><td>${person.name}</td><td>${person.role}</td><td>${person.days.sort((a, b) => a - b).join(', ')}</td></tr>`;
-            body.innerHTML += row;
-        });
-        window.print();
-    }
+          });
 
-    function openModal(day) {
-        const monthName = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
-        document.getElementById('modalTitle').innerText = `วันที่ ${day} ${monthName}`;
-        const body = document.getElementById('modalBody');
-        if (!fullData[day]) {
-            body.innerHTML = '<p style="text-align:center; padding:30px;">ไม่มีข้อมูล</p>';
-        } else {
-            const sortedEntries = [...fullData[day]].sort((a, b) => {
-                if (a.role.includes("นายทหารเวร")) return -1;
-                if (b.role.includes("นายทหารเวร")) return 1;
-                return 0;
-            });
-            body.innerHTML = sortedEntries.map(d => {
-                let roleDisplay = d.role;
-                // ล็อคเป้า: เฉพาะ "เวรวิทยุ" เท่านั้นที่มีวงเล็บ
-                if (d.role === "เวรวิทยุ" && d.shift_turn) {
-                    roleDisplay = `${d.role} (${d.shift_turn})`;
-                }
-                return `<div class="duty-item"><div><b>${d.rank_name}</b><br><small>${roleDisplay}</small></div><button class="btn-del" onclick="deleteEntry(${d.id}, '${d.rank_name}', ${day})">ลบ</button></div>`;
-            }).join('');
+          const boss = sortedDayData[0];
+          html += `<div class="badge-boss">⭐ ${boss.rank_name}</div>`;
+
+          if (fullData[d].length > 1)
+            html += `<div class="badge-count">และอื่นๆ อีก ${
+              fullData[d].length - 1
+            } นาย</div>`;
         }
-        document.getElementById('dutyModal').style.display = 'flex';
+
+        body.innerHTML += `<div class="day-cell" onclick="openModal(${d})">${html}</div>`;
+      }
+    } catch (e) {
+      console.error("REPORT ERROR:", e);
+      alert("❌ โหลดรายงานไม่สำเร็จ (เปิด F12 → Console ดูรายละเอียด)");
+    }
+  }
+
+  function prepareAndPrint() {
+    const monthLabel =
+      document.getElementById("monthSelect").options[
+        document.getElementById("monthSelect").selectedIndex
+      ].text;
+
+    const year = new Date().getFullYear();
+    document.getElementById(
+      "printSubTitle"
+    ).innerText = `กลุ่มงาน: ${currentGroup} | ประจำเดือน ${monthLabel} ${year + 543}`;
+
+    const body = document.getElementById("printTableBody");
+    body.innerHTML = "";
+
+    const summary = {};
+    Object.keys(fullData).forEach((day) => {
+      fullData[day].forEach((item) => {
+        let roleDisplay = getRole(item);
+
+        // เฉพาะเวรวิทยุเท่านั้นที่แสดงผลัด
+        if (roleDisplay === "เวรวิทยุ" && item.shift_turn) {
+          roleDisplay = `${roleDisplay} (${item.shift_turn})`;
+        }
+
+        const key = `${item.rank_name}-${roleDisplay}`;
+        if (!summary[key])
+          summary[key] = { name: item.rank_name, role: roleDisplay, days: [] };
+
+        summary[key].days.push(parseInt(day, 10));
+      });
+    });
+
+    const sortedPeople = Object.values(summary).sort((a, b) => {
+      if (getRole(a).includes("นายทหารเวร")) return -1;
+if (getRole(b).includes("นายทหารเวร")) return 1;
+      return 0;
+    });
+  
+    sortedPeople.forEach((p) => {
+      body.innerHTML += `<tr>
+        <td>${p.name}</td>
+        <td>${p.role}</td>
+        <td>${p.days.sort((x,y)=>x-y).join(", ")}</td>
+      </tr>`;
+    });
+
+    window.print();
+  }
+
+  function openModal(day) {
+    const monthName =
+      document.getElementById("monthSelect").options[
+        document.getElementById("monthSelect").selectedIndex
+      ].text;
+
+    document.getElementById("modalTitle").innerText = `วันที่ ${day} ${monthName}`;
+
+    const body = document.getElementById("modalBody");
+
+    if (!fullData[day]) {
+      body.innerHTML = '<p style="text-align:center; padding:30px;">ไม่มีข้อมูล</p>';
+    } else {
+      const sortedEntries = [...fullData[day]].sort((a, b) => {
+        const ar = getRole(a);
+        const br = getRole(b);
+        if (ar.includes("นายทหารเวร")) return -1;
+        if (br.includes("นายทหารเวร")) return 1;
+        return 0;
+      });
+
+      body.innerHTML = sortedEntries
+        .map((d) => {
+          let roleDisplay = getRole(d);
+          if (roleDisplay === "เวรวิทยุ" && d.shift_turn) {
+            roleDisplay = `${roleDisplay} (${d.shift_turn})`;
+          }
+          return `<div class="duty-item">
+            <div><b>${d.rank_name}</b><br><small>${roleDisplay}</small></div>
+            <button class="btn-del" onclick="deleteEntry(${d.id}, '${d.rank_name}', ${day})">ลบ</button>
+          </div>`;
+        })
+        .join("");
     }
 
-    async function syncAllToGoogle() {
+    document.getElementById("dutyModal").style.display = "flex";
+  }
 
-    const btn = document.getElementById('syncBtn');
-    const month = document.getElementById('monthSelect').value;
+  async function deleteEntry(id, name, day) {
+    if (!confirm(`ลบ ${name}?`)) return;
+    const res = await fetch(`/delete-shift/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      await renderReport(currentGroup);
+      closeModal();
+    } else {
+      alert("❌ ลบไม่สำเร็จ");
+    }
+  }
 
-    if(!confirm(`ต้องการซิงค์เวร ${currentGroup} เดือนนี้เข้า Google Calendar หรือไม่?`)) return;
+  function closeModal() {
+    document.getElementById("dutyModal").style.display = "none";
+  }
+  window.onclick = (e) => {
+    if (e.target == document.getElementById("dutyModal")) closeModal();
+  };
+
+  async function syncAllToGoogle() {
+    const btn = document.getElementById("syncBtn");
+    const month = Number(document.getElementById("monthSelect").value);
+    const year = new Date().getFullYear();
+    const group = currentGroup;
+
+    if (!confirm(`ต้องการซิงค์เวร ${group} เดือนนี้เข้า Google Calendar หรือไม่?`)) return;
 
     btn.disabled = true;
     btn.innerHTML = "⏳ กำลังซิงค์...";
 
     try {
-
-        const res = await fetch(`/sync-existing-shifts?month=${month}&year=2026&group=${currentGroup}`, {
-            method: 'POST'
-        });
-
-        const data = await res.json();
-
-        if(res.ok){
-            alert(`✅ ${data.message}`);
-        }else{
-            alert(`❌ Sync ไม่สำเร็จ`);
-        }
-
+      const res = await fetch(
+        `/sync-existing-shifts?month=${month}&year=${year}&group=${encodeURIComponent(group)}`,
+        { method: "POST" }
+      );
+      const data = await res.json();
+      if (res.ok) alert(`✅ ${data.message}`);
+      else alert("❌ Sync ไม่สำเร็จ");
     } catch (err) {
-
-        console.error(err);
-        alert("❌ Server Error");
-
+      console.error(err);
+      alert("❌ Server Error");
     } finally {
-
-        btn.disabled = false;
-        btn.innerHTML = "<i class='fab fa-google'></i> ซิงค์ Google Calendar";
-
+      btn.disabled = false;
+      btn.innerHTML = "<i class='fab fa-google'></i> ซิงค์ Google Calendar";
     }
-}
+  }
 
-    async function deleteEntry(id, name, day) {
-        if (confirm(`ลบ ${name}?`)) {
-            const res = await fetch(`/delete-shift/${id}`, { method: 'DELETE' });
-            if (res.ok) { await renderReport(currentGroup); closeModal(); }
-        }
-    }
-
-    function closeModal() { document.getElementById('dutyModal').style.display = 'none'; }
-    window.onclick = (e) => { if(e.target == document.getElementById('dutyModal')) closeModal(); }
-    renderReport('กองพัน');
-
-    async function syncToday() {
-
-    const btn = document.getElementById('syncTodayBtn');
-    const today = new Date();
-    
-    const month = today.getMonth() + 1;
-    const year = today.getFullYear();
-
-    if(!confirm("ต้องการซิงค์เวรของวันนี้เข้า Google Calendar หรือไม่?")) return;
+  async function syncToday() {
+    const btn = document.getElementById("syncTodayBtn");
+    if (!confirm("ต้องการซิงค์เวรของวันนี้เข้า Google Calendar หรือไม่?")) return;
 
     btn.disabled = true;
     btn.innerHTML = "⏳ กำลังซิงค์...";
 
     try {
-
-        const res = await fetch(`/sync-today?month=${month}&year=${year}&group=${currentGroup}`, {
-            method: "POST"
-        });
-
-        const data = await res.json();
-
-        if(res.ok){
-            alert(`✅ ${data.message}`);
-        }else{
-            alert("❌ Sync ไม่สำเร็จ");
-        }
-
-    } catch(err){
-
-        console.error(err);
-        alert("❌ Server Error");
-
+      const res = await fetch(`/sync-today`, { method: "POST" });
+      const data = await res.json();
+      if (res.ok) alert(`✅ ${data.message}`);
+      else alert("❌ Sync ไม่สำเร็จ");
+    } catch (err) {
+      console.error(err);
+      alert("❌ Server Error");
     } finally {
-
-        btn.disabled = false;
-        btn.innerHTML = "<i class='fas fa-bolt'></i> ซิงค์เวรวันนี้";
-
+      btn.disabled = false;
+      btn.innerHTML = "<i class='fas fa-bolt'></i> ซิงค์เวรวันนี้";
     }
-}
+  }
+
+  // ✅ เริ่มต้น
+  renderReport("กองพัน");
 </script>
 </body>
 </html>

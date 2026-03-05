@@ -358,15 +358,27 @@ API: REPORT (calendar report by group)
 app.get("/get-report-calendar", async (req, res) => {
   try {
     const { month, year, group } = req.query;
-    const g = normalizeGroup(group);
+
+    const g = String(group || "").trim();
+
+    // รองรับทั้ง "ศปก" และ "ศปก."
+    const groupList =
+      g === "ศปก" || g === "ศปก."
+        ? ["ศปก", "ศปก."]
+        : [g];
+
+    const placeholders = groupList.map(() => "?").join(",");
+
     const [rows] = await pool.execute(
       `SELECT s.*, u.rank_name
        FROM shift_assignments s
        JOIN users u ON s.user_id=u.id
-       WHERE MONTH(s.shift_date)=? AND YEAR(s.shift_date)=?
-       AND TRIM(s.group_name)=TRIM(?)`,
-      [month, year, g]
+       WHERE MONTH(s.shift_date)=?
+         AND YEAR(s.shift_date)=?
+         AND TRIM(s.group_name) IN (${placeholders})`,
+      [month, year, ...groupList]
     );
+
     res.json(rows);
   } catch (err) {
     res.status(500).send(err.message);
