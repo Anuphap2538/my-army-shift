@@ -32,7 +32,11 @@ app.use(
 DATABASE POOL
 ========================= */
 
+const express = require("express");
 const mysql = require("mysql2/promise");
+require("dotenv").config();
+
+const app = express();
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
