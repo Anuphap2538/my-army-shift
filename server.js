@@ -7,6 +7,7 @@ import { google } from "googleapis";
 dotenv.config();
 
 const app = express();
+app.set("trust proxy", 1);
 
 app.use(express.json());
 app.use(express.static("public"));
@@ -14,14 +15,13 @@ app.use(express.static("public"));
 /* =========================
 SESSION
 ========================= */
-
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "army-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false,
+      secure: false, // ถ้าใช้ https + custom domain ค่อยเปลี่ยน true
       httpOnly: true,
       maxAge: 86400000,
     },
@@ -29,31 +29,39 @@ app.use(
 );
 
 /* =========================
-DATABASE POOL
+DATABASE (TiDB Cloud)
 ========================= */
-
-const express = require("express");
-const mysql = require("mysql2/promise");
-require("dotenv").config();
-
-const app = express();
-
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
-  port: process.env.DB_PORT,
+  port: Number(process.env.DB_PORT || 4000),
   ssl: {
     minVersion: "TLSv1.2",
-    rejectUnauthorized: true
-  }
+    rejectUnauthorized: true,
+  },
+  waitForConnections: true,
+  connectionLimit: 10,
+});
+
+/* =========================
+UTILS
+========================= */
+const normalizeGroup = (g) =>
+  String(g || "")
+    .trim()
+    .replace("ศปก.", "ศปก")
+    .replace("ศปก．", "ศปก");
+
+const pickBodyOrQuery = (req) => ({
+  ...req.query,
+  ...(req.body && typeof req.body === "object" ? req.body : {}),
 });
 
 /* =========================
 TEST DATABASE
 ========================= */
-
 async function testDB() {
   try {
     const conn = await pool.getConnection();
@@ -63,16 +71,23 @@ async function testDB() {
     console.error("❌ Database Error:", err.message);
   }
 }
-
 testDB();
+
+app.get("/test-db", async (req, res) => {
+  try {
+    const [r] = await pool.query("SELECT 1 as ok");
+    res.json({ ok: r?.[0]?.ok === 1 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /* =========================
 GOOGLE OAUTH
 ========================= */
-
-const REDIRECT_URI = process.env.RENDER_EXTERNAL_URL 
-  ? `${process.env.RENDER_EXTERNAL_URL}/login-redirect` 
-  : 'http://localhost:3000/login-redirect';
+const REDIRECT_URI = process.env.RENDER_EXTERNAL_URL
+  ? `${process.env.RENDER_EXTERNAL_URL}/login-redirect`
+  : "http://localhost:3000/login-redirect";
 
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -83,7 +98,6 @@ const oauth2Client = new google.auth.OAuth2(
 /* =========================
 GOOGLE LOGIN
 ========================= */
-
 app.get("/google/auth", (req, res) => {
   const url = oauth2Client.generateAuthUrl({
     access_type: "offline",
@@ -94,72 +108,73 @@ app.get("/google/auth", (req, res) => {
       "openid",
     ],
   });
-
   res.redirect(url);
 });
 
 app.get("/login-redirect", async (req, res) => {
   try {
     const code = req.query.code;
-
-    if (!code) {
-      return res.send("❌ Invalid Login Request");
-    }
+    if (!code) return res.status(400).send("❌ Invalid Login Request");
 
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
 
-    const oauth2 = google.oauth2({
-      auth: oauth2Client,
-      version: "v2",
-    });
-
+    const oauth2 = google.oauth2({ auth: oauth2Client, version: "v2" });
     const userInfo = await oauth2.userinfo.get();
     const email = userInfo.data.email;
 
     const [rows] = await pool.execute(
-      "SELECT id,rank_name FROM users WHERE email=?",
+      "SELECT id, rank_name FROM users WHERE email=?",
       [email]
     );
 
-    if (rows.length === 0) {
-      return res.send("❌ ไม่พบ email ในระบบ");
-    }
+    if (rows.length === 0) return res.status(404).send("❌ ไม่พบ email ในระบบ");
 
-    await pool.execute(
-      "UPDATE users SET google_token=? WHERE email=?",
-      [JSON.stringify(tokens), email]
-    );
+    await pool.execute("UPDATE users SET google_token=? WHERE email=?", [
+      JSON.stringify(tokens),
+      email,
+    ]);
 
     req.session.userId = rows[0].id;
     req.session.userName = rows[0].rank_name;
     req.session.userEmail = email;
 
-    res.redirect("/dashboard.html");
+    res.redirect(process.env.DASHBOARD_URL || "/dashboard.html");
   } catch (err) {
     console.error("Login Error:", err);
-    res.send("Login Error");
+    res.status(500).send("Login Error");
   }
 });
 
 /* =========================
-SEND GOOGLE CALENDAR
+GOOGLE CALENDAR HELPERS
 ========================= */
+function buildAuthFromToken(tokenJson) {
+  const auth = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    REDIRECT_URI
+  );
+  auth.setCredentials(JSON.parse(tokenJson));
+  return auth;
+}
 
 async function sendToGoogleCalendar(auth, shift, allShifts) {
   const calendar = google.calendar({ version: "v3", auth });
 
-  const kp = allShifts.filter((s) => (s.group_name || "").trim() === "กองพัน").length;
-  const spk = allShifts.filter((s) => (s.group_name || "").trim() === "ศปก").length;
+  const kp = allShifts.filter((s) => normalizeGroup(s.group_name) === "กองพัน")
+    .length;
+  const spk = allShifts.filter((s) => normalizeGroup(s.group_name) === "ศปก")
+    .length;
 
   const supervisor = allShifts.find((s) =>
-    (s.role_type || "").includes("นายทหารเวร")
+    String(s.role_type || "").includes("นายทหารเวร")
   );
 
   let summary;
   let description;
 
-  if ((shift.role_type || "").includes("นายทหารเวร")) {
+  if (String(shift.role_type || "").includes("นายทหารเวร")) {
     summary = `🛡️ เวร: ${shift.role_type}`;
     description = `📊 ยอดเวรวันนี้: กองพัน ${kp} นาย / ศปก ${spk} นาย`;
   } else {
@@ -169,115 +184,191 @@ async function sendToGoogleCalendar(auth, shift, allShifts) {
     }`;
   }
 
-  const dateOnly = new Date(shift.shift_date).toISOString().split("T")[0];
+  // กัน timezone เพี้ยน: ใช้วันที่จาก DB ตรงๆ ถ้าเป็น YYYY-MM-DD
+  const dateOnly =
+    typeof shift.shift_date === "string"
+      ? shift.shift_date
+      : new Date(shift.shift_date).toISOString().split("T")[0];
 
   const event = {
     summary,
     description,
-    start: {
-      dateTime: `${dateOnly}T08:00:00`,
-      timeZone: "Asia/Bangkok",
-    },
-    end: {
-      dateTime: `${dateOnly}T09:00:00`,
-      timeZone: "Asia/Bangkok",
-    },
+    start: { dateTime: `${dateOnly}T08:00:00`, timeZone: "Asia/Bangkok" },
+    end: { dateTime: `${dateOnly}T09:00:00`, timeZone: "Asia/Bangkok" },
     reminders: {
       useDefault: false,
       overrides: [{ method: "popup", minutes: 60 }],
     },
   };
 
-  return calendar.events.insert({
-    calendarId: "primary",
-    resource: event,
-  });
+  return calendar.events.insert({ calendarId: "primary", resource: event });
 }
 
 /* =========================
-ASSIGN SHIFT
+API: USERS
 ========================= */
+app.get("/get-users", async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      "SELECT id, rank_name, role, email, (google_token IS NOT NULL) AS is_linked FROM users ORDER BY id"
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("GET USERS ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
+/* =========================
+API: SHIFTS LIST
+========================= */
+app.get("/get-shifts", async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    const [rows] = await pool.execute(
+      `SELECT s.*, u.rank_name, u.email
+       FROM shift_assignments s
+       JOIN users u ON s.user_id=u.id
+       WHERE MONTH(s.shift_date)=? AND YEAR(s.shift_date)=?
+       ORDER BY s.shift_date`,
+      [month, year]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+/* =========================
+API: ASSIGN SHIFT
+- รองรับ shift_turn / note ถ้ามี column
+- ถ้า table ไม่มี column เหล่านี้ จะ fallback ไป insert แบบเก่า
+========================= */
 app.post("/assign-shift", async (req, res) => {
   try {
-    const { user_id, shift_date, role_type, group_name } = req.body;
+    const {
+      user_id,
+      shift_date,
+      role_type,
+      group_name,
+      shift_turn = null,
+      note = null,
+    } = req.body;
 
-    if (!user_id || !shift_date) {
-      return res.status(400).send("ข้อมูลไม่ครบ");
-    }
+    if (!user_id || !shift_date) return res.status(400).send("ข้อมูลไม่ครบ");
+
+    const groupNorm = normalizeGroup(group_name);
 
     const [existing] = await pool.execute(
       "SELECT id FROM shift_assignments WHERE user_id=? AND shift_date=?",
       [user_id, shift_date]
     );
+    if (existing.length > 0) return res.status(400).send("มีเวรแล้ว");
 
-    if (existing.length > 0) {
-      return res.status(400).send("มีเวรแล้ว");
+    // ลอง insert แบบ full ก่อน
+    try {
+      await pool.execute(
+        `INSERT INTO shift_assignments
+         (user_id, shift_date, role_type, group_name, shift_turn, note)
+         VALUES (?,?,?,?,?,?)`,
+        [user_id, shift_date, role_type, groupNorm, shift_turn, note]
+      );
+    } catch (e) {
+      // fallback สำหรับ schema เก่า
+      await pool.execute(
+        `INSERT INTO shift_assignments
+         (user_id, shift_date, role_type, group_name)
+         VALUES (?,?,?,?)`,
+        [user_id, shift_date, role_type, groupNorm]
+      );
     }
 
-    await pool.execute(
-      "INSERT INTO shift_assignments (user_id,shift_date,role_type,group_name) VALUES (?,?,?,?)",
-      [user_id, shift_date, role_type, group_name]
-    );
-
+    // ถ้าคนนี้ link google แล้ว -> ส่งเข้า calendar ทันที (best effort)
     const [user] = await pool.execute(
-      "SELECT google_token,email,rank_name FROM users WHERE id=?",
+      "SELECT google_token, email, rank_name FROM users WHERE id=?",
       [user_id]
     );
 
     if (user.length > 0 && user[0].google_token) {
       try {
-        const auth = new google.auth.OAuth2(
-          process.env.GOOGLE_CLIENT_ID,
-          process.env.GOOGLE_CLIENT_SECRET,
-          REDIRECT_URI
-        );
-
-        auth.setCredentials(JSON.parse(user[0].google_token));
-
+        const auth = buildAuthFromToken(user[0].google_token);
         const [dayShifts] = await pool.execute(
-          `SELECT s.*,u.rank_name,u.email 
-          FROM shift_assignments s
-          JOIN users u ON s.user_id=u.id
-          WHERE s.shift_date=?`,
+          `SELECT s.*, u.rank_name, u.email
+           FROM shift_assignments s
+           JOIN users u ON s.user_id=u.id
+           WHERE s.shift_date=?`,
           [shift_date]
         );
-
         await sendToGoogleCalendar(
           auth,
           {
             shift_date,
             role_type,
-            group_name,
+            group_name: groupNorm,
             email: user[0].email,
             rank_name: user[0].rank_name,
           },
           dayShifts
         );
       } catch (tokenErr) {
-        console.error("❌ Token Error for individual assign:", tokenErr.message);
+        console.error("❌ Token/Calendar Error:", tokenErr.message);
       }
     }
 
     res.send("ok");
   } catch (err) {
-    console.error(err);
+    console.error("ASSIGN ERROR:", err);
     res.status(500).send(err.message);
   }
 });
 
-app.post("/sync-today", async (req, res) => {
-
+/* =========================
+API: DELETE SHIFT
+========================= */
+app.delete("/delete-shift/:id", async (req, res) => {
   try {
+    const { id } = req.params;
+    await pool.execute("DELETE FROM shift_assignments WHERE id=?", [id]);
+    res.send("ok");
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
 
+/* =========================
+API: REPORT (calendar report by group)
+========================= */
+app.get("/get-report-calendar", async (req, res) => {
+  try {
+    const { month, year, group } = req.query;
+    const g = normalizeGroup(group);
+    const [rows] = await pool.execute(
+      `SELECT s.*, u.rank_name
+       FROM shift_assignments s
+       JOIN users u ON s.user_id=u.id
+       WHERE MONTH(s.shift_date)=? AND YEAR(s.shift_date)=?
+       AND TRIM(s.group_name)=TRIM(?)`,
+      [month, year, g]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+/* =========================
+SYNC: TODAY
+========================= */
+app.post("/sync-today", async (req, res) => {
+  try {
     const today = new Date();
     const dateStr = today.toISOString().split("T")[0];
 
     const [rows] = await pool.execute(
-      `SELECT s.*,u.rank_name,u.email,u.google_token
-      FROM shift_assignments s
-      JOIN users u ON s.user_id=u.id
-      WHERE s.shift_date=?`,
+      `SELECT s.*, u.rank_name, u.email, u.google_token
+       FROM shift_assignments s
+       JOIN users u ON s.user_id=u.id
+       WHERE s.shift_date=?`,
       [dateStr]
     );
 
@@ -285,178 +376,80 @@ app.post("/sync-today", async (req, res) => {
     let skip = 0;
 
     for (const shift of rows) {
-
       if (!shift.google_token) {
         skip++;
         continue;
       }
-
       try {
-
-        const auth = new google.auth.OAuth2(
-          process.env.GOOGLE_CLIENT_ID,
-          process.env.GOOGLE_CLIENT_SECRET,
-          REDIRECT_URI
-        );
-
-        auth.setCredentials(JSON.parse(shift.google_token));
-
+        const auth = buildAuthFromToken(shift.google_token);
         await sendToGoogleCalendar(auth, shift, rows);
-
         success++;
-
       } catch (err) {
-
-        console.log(err.message);
+        console.log("SYNC TODAY ERR:", err.message);
         skip++;
-
       }
-
     }
 
     res.json({
-      message: `ซิงค์เวรวันนี้สำเร็จ ${success} นาย / ข้าม ${skip} นาย`
+      message: `ซิงค์เวรวันนี้สำเร็จ ${success} นาย / ข้าม ${skip} นาย`,
     });
-
   } catch (err) {
-
     res.status(500).json({ error: err.message });
-
   }
-
 });
 
 /* =========================
-GET USERS & SHIFTS
+SYNC: EXISTING SHIFTS (BY MONTH/YEAR/GROUP)
+- รองรับส่งทั้ง query หรือ body
 ========================= */
-
-app.get("/get-report-calendar", async (req, res) => {
-  try {
-
-    const { month, year, group } = req.query;
-
-    const [rows] = await pool.execute(
-      `SELECT s.*,u.rank_name
-       FROM shift_assignments s
-       JOIN users u ON s.user_id=u.id
-       WHERE MONTH(s.shift_date)=?
-       AND YEAR(s.shift_date)=?
-       AND TRIM(s.group_name)=TRIM(?)`,
-      [month, year, group]
-    );
-
-    res.json(rows);
-
-  } catch (err) {
-
-    res.status(500).send(err.message);
-
-  }
-});
-
-app.delete("/delete-shift/:id", async (req, res) => {
-  try {
-
-    const { id } = req.params;
-
-    await pool.execute(
-      "DELETE FROM shift_assignments WHERE id=?",
-      [id]
-    );
-
-    res.send("ok");
-
-  } catch (err) {
-
-    res.status(500).send(err.message);
-
-  }
-});
-
-app.get("/get-users", async (req, res) => {
-  try {
-
-    const [rows] = await pool.execute(
-      "SELECT id, rank_name, role FROM users ORDER BY id"
-    );
-
-    res.json(rows);
-
-  } catch (err) {
-
-    console.error("❌ GET USERS ERROR:", err);
-    res.status(500).json({
-      error: err.message
-    });
-
-  }
-});
-
-app.get("/get-shifts", async (req, res) => {
-  try {
-    const { month, year } = req.query;
-    const [rows] = await pool.execute(
-      `SELECT s.*,u.rank_name FROM shift_assignments s JOIN users u ON s.user_id=u.id WHERE MONTH(s.shift_date)=? AND YEAR(s.shift_date)=? ORDER BY s.shift_date`,
-      [month, year]
-    );
-    res.json(rows);
-  } catch (err) { res.status(500).send(err.message); }
-});
-
-/* =========================
-SYNC EXISTING SHIFTS (ตัวแก้ใหม่: ปลอดภัย & แม่นยำ)
-========================= */
-
 app.post("/sync-existing-shifts", async (req, res) => {
-  const { month, year, group } = req.query;
-  console.log(`🚀 เริ่ม Sync เดือน ${month}/${year} กลุ่ม ${group}`);
+  const { month, year, group } = pickBodyOrQuery(req);
+  const g = normalizeGroup(group);
+
+  console.log(`🚀 Sync เดือน ${month}/${year} กลุ่ม ${g}`);
 
   try {
     const [allShifts] = await pool.execute(
-      `SELECT s.*,u.rank_name,u.email,u.google_token
-      FROM shift_assignments s
-      JOIN users u ON s.user_id=u.id
-      WHERE MONTH(s.shift_date)=?
-      AND YEAR(s.shift_date)=?`,
+      `SELECT s.*, u.rank_name, u.email, u.google_token
+       FROM shift_assignments s
+       JOIN users u ON s.user_id=u.id
+       WHERE MONTH(s.shift_date)=? AND YEAR(s.shift_date)=?`,
       [month, year]
     );
 
-    const targetShifts = allShifts.filter(
-      (s) => (s.group_name || "").trim() === (group || "").trim()
+    const target = allShifts.filter(
+      (s) => normalizeGroup(s.group_name) === g
     );
-
-    console.log(`พบเป้าหมายที่ต้อง Sync ${targetShifts.length} รายการ`);
 
     let success = 0;
     let skip = 0;
 
-    // เปลี่ยนมาใช้ for...of เพื่อความแม่นยำและกันโดน Google Rate Limit
-    for (const shift of targetShifts) {
+    for (const shift of target) {
       if (!shift.google_token) {
-        console.log(`⚠️ ข้าม ${shift.rank_name}: ไม่มี Token`);
         skip++;
         continue;
       }
-
       try {
-        const auth = new google.auth.OAuth2(
-          process.env.GOOGLE_CLIENT_ID,
-          process.env.GOOGLE_CLIENT_SECRET,
-          REDIRECT_URI
-        );
+        const auth = buildAuthFromToken(shift.google_token);
 
-        auth.setCredentials(JSON.parse(shift.google_token));
+        // dayShifts สำหรับ description
+        const dateKey =
+          typeof shift.shift_date === "string"
+            ? shift.shift_date
+            : new Date(shift.shift_date).toISOString().split("T")[0];
 
-        const shiftDateObj = new Date(shift.shift_date);
-        const dayShifts = allShifts.filter(
-          (s) => new Date(s.shift_date).toDateString() === shiftDateObj.toDateString()
-        );
+        const dayShifts = allShifts.filter((s) => {
+          const k =
+            typeof s.shift_date === "string"
+              ? s.shift_date
+              : new Date(s.shift_date).toISOString().split("T")[0];
+          return k === dateKey;
+        });
 
         await sendToGoogleCalendar(auth, shift, dayShifts);
         success++;
-        console.log(`✅ Sync สำเร็จ: ${shift.rank_name}`);
       } catch (err) {
-        console.log(`❌ ผิดพลาดที่ ${shift.rank_name}:`, err.message);
+        console.log(`❌ Sync ผิดพลาด ${shift.rank_name}:`, err.message);
         skip++;
       }
     }
@@ -465,43 +458,65 @@ app.post("/sync-existing-shifts", async (req, res) => {
       success: true,
       message: `Sync สำเร็จ ${success} นาย / ข้าม ${skip} นาย`,
     });
-
   } catch (err) {
-    console.error("SYNC ERROR", err);
+    console.error("SYNC ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
 /* =========================
-SYSTEM ROUTES (CLEAR/PROFILE/HEALTH)
+SYSTEM: CLEAR
+- รองรับทั้ง DELETE และ GET เพื่อกันหน้าเก่าเรียกผิด method
 ========================= */
+async function clearAllShiftsImpl(res) {
+  try {
+    await pool.execute("DELETE FROM shift_assignments");
+    res.send("ok");
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+}
 
-app.delete("/clear-all-users", async (req, res) => {
+async function clearAllUsersImpl(res) {
   try {
     await pool.execute("DELETE FROM shift_assignments");
     await pool.execute("DELETE FROM users");
     res.send("ok");
-  } catch (err) { res.status(500).send(err.message); }
-});
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+}
 
-app.delete("/clear-all-shifts", async (req, res) => {
-  try {
-    await pool.execute("DELETE FROM shift_assignments");
-    res.send("ok");
-  } catch (err) { res.status(500).send(err.message); }
-});
+app.delete("/clear-all-shifts", async (req, res) => clearAllShiftsImpl(res));
+app.get("/clear-all-shifts", async (req, res) => clearAllShiftsImpl(res)); // backward compat
 
+app.delete("/clear-all-users", async (req, res) => clearAllUsersImpl(res));
+app.get("/clear-all-users", async (req, res) => clearAllUsersImpl(res)); // backward compat
+
+/* =========================
+PROFILE + HEALTH
+========================= */
 app.get("/api/my-profile", (req, res) => {
   if (!req.session.userId) return res.status(401).send("Unauthorized");
-  res.json({ id: req.session.userId, name: req.session.userName, email: req.session.userEmail });
+  res.json({
+    id: req.session.userId,
+    name: req.session.userName,
+    email: req.session.userEmail,
+  });
 });
 
-app.get("/health", (req, res) => { res.send("OK"); });
+app.get("/health", (req, res) => res.send("OK"));
+
+/* =========================
+SAFETY: LOG UNHANDLED
+========================= */
+process.on("unhandledRejection", (err) => {
+  console.error("UNHANDLED REJECTION:", err);
+});
 
 /* =========================
 START SERVER
 ========================= */
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
   console.log("🚀 Server running on port", PORT);
