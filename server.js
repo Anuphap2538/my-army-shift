@@ -431,11 +431,11 @@ app.get('/get-my-duty', async (req, res) => {
         const connection = await getConnection();
         // เปลี่ยน JOIN เป็น LEFT JOIN เพื่อให้ "เวรวิทยุ" หลุดออกมาด้วย
         const [rows] = await connection.execute(
-            `SELECT s.shift_date, s.role_type, u.rank_name, s.user_id 
-             FROM shift_assignments s
-             LEFT JOIN users u ON s.user_id = u.id 
-             WHERE MONTH(s.shift_date) = 3 AND YEAR(s.shift_date) = 2026`
-        );
+    `SELECT s.shift_date, s.role_type, u.rank_name, s.user_id 
+     FROM shift_assignments s
+     LEFT JOIN users u ON s.user_id = u.id 
+     WHERE MONTH(s.shift_date) = 3 AND YEAR(s.shift_date) = 2026`
+);
         await connection.end();
         res.json(rows);
     } catch (err) {

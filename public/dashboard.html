@@ -148,14 +148,18 @@
         scheduleData = {};
 
         if (Array.isArray(myShifts)) {
-            myShifts.forEach(s => {
+           myShifts.forEach(s => {
+    // ใช้ UTC เพื่อป้องกันวันที่เลื่อน (Timezone)
     const d = new Date(s.shift_date);
-    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`; 
     
     if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
     
     scheduleData[dateStr].push({ 
-        // ถ้า s.rank_name ไม่มีค่า ให้ใช้ s.role_type (เวรวิทยุ) มาโชว์เป็นชื่อแทนไปเลย
+        // ถ้าไม่มีชื่อยศ ให้ใช้ประเภทเวรโชว์แทน
         name: s.rank_name || s.role_type || "เจ้าหน้าที่", 
         role: s.role_type 
     });
@@ -200,15 +204,23 @@
             cell.innerHTML = `<span class="${colorClass}">${i}</span>${holidayName ? `<span class="holiday-name">${holidayName}</span>` : ''}`;
 
             const duties = scheduleData[dateStr] || [];
-            const isMe = duties.some(d => d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, ''));
+const isMe = duties.some(d => d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, ''));
 
-            if (isMe) {
-                cell.classList.add('duty-active');
-            } else if (duties.length > 0) {
-                const dot = document.createElement('div');
-                dot.className = 'duty-dot';
-                cell.appendChild(dot);
-            }
+if (isMe) {
+    cell.classList.add('duty-active'); // สีน้ำเงินเด่นๆ (เวรเรา)
+} else if (duties.length > 0) {
+    // --- จุดเปลี่ยนโลก: ถ้ามีเวรคนอื่น (เช่น เวรวิทยุ) ให้ระบายสีฟ้าอ่อนทั้งช่อง ---
+    cell.style.backgroundColor = '#f0f4ff'; 
+    cell.style.border = '1px solid #d1e3ff';
+    
+    // ใส่ข้อความบอกจำนวนเวรด้านล่างเลขวันที่
+    const dutyTag = document.createElement('div');
+    dutyTag.style.fontSize = '9px';
+    dutyTag.style.color = '#3b82f6';
+    dutyTag.style.fontWeight = 'bold';
+    dutyTag.innerText = `เวร (${duties.length})`; 
+    cell.appendChild(dutyTag);
+}
 
             cell.onclick = () => showInfo(i, dateStr, holidayName, duties);
             grid.appendChild(cell);
