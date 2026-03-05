@@ -380,8 +380,10 @@ app.get("/get-users", async (req, res) => {
 
   } catch (err) {
 
-    console.error("GET USERS ERROR:", err);
-    res.status(500).send(err.message);
+    console.error("❌ GET USERS ERROR:", err);
+    res.status(500).json({
+      error: err.message
+    });
 
   }
 });
