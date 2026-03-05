@@ -540,7 +540,39 @@
     window.onclick = (e) => {
       if (e.target === document.getElementById("dutyModal")) closeModal();
     };
+    const RANK_PRIORITY = [
+  // นายทหารสัญญาบัตร (บนลงล่าง)
+  "พล.อ.อ.", "พล.อ.ท.", "พล.อ.ต.",
+  "น.อ.", "น.ท.", "น.ต.",
+  "ร.อ.", "ร.ท.", "ร.ต.",
 
+  // นายทหารประทวน/สัญญาบัตรต่ำ (ปรับตามที่หน่วยใช้จริง)
+  "พ.อ.อ.", "พ.อ.ท.", "พ.อ.ต.",
+  "จ.อ.", "จ.ท.", "จ.ต."
+ ];
+
+// ทำให้รูปแบบยศเป็นมาตรฐานขึ้น (กันจุด/ช่องว่างเพี้ยน)
+function normalizeRankText(s){
+  return String(s || "")
+    .replace(/\s+/g, " ")        // รวมช่องว่าง
+    .replace(/．/g, ".")         // กันจุด fullwidth
+    .trim();
+}
+
+// ดึง “คำนำหน้ายศ” จากต้นชื่อ แล้วคืนลำดับ (เลขน้อย = ยศสูง)
+function getRankWeightFromName(fullName){
+  const name = normalizeRankText(fullName);
+
+  for (let i = 0; i < RANK_PRIORITY.length; i++){
+    const r = RANK_PRIORITY[i];
+
+    // รองรับทั้งแบบ "น.อ.สมชาย" และ "น.อ. สมชาย"
+    if (name.startsWith(r) || name.startsWith(r + " ")){
+      return i;
+    }
+  }
+  return 9999; // ไม่รู้ยศ -> ไปท้ายสุด
+}
     function prepareAndPrint(){
       const monthLabel = document.getElementById("monthSelect").options[document.getElementById("monthSelect").selectedIndex].text;
       const year = FIX_YEAR;
@@ -572,21 +604,20 @@ if (roleDisplay === "เวรวิทยุ") {
         });
       });
 
-      const sortedPeople = Object.values(summary).sort((a,b) => {
-        if (String(a.role).includes("นายทหารเวร")) return -1;
-        if (String(b.role).includes("นายทหารเวร")) return 1;
-        return a.name.localeCompare(b.name, "th");
-      });
+      const sortedPeople = Object.values(summary).sort((a, b) => {
 
-      sortedPeople.forEach((p) => {
-        body.innerHTML += `
-          <tr>
-            <td>${p.name}</td>
-            <td>${p.role}</td>
-            <td>${p.days.sort((x,y)=>x-y).join(", ")}</td>
-          </tr>
-        `;
-      });
+  // 1) นายทหารเวรขึ้นก่อนเสมอ
+  if ((a.role || "").includes("นายทหารเวร")) return -1;
+  if ((b.role || "").includes("นายทหารเวร")) return 1;
+
+  // 2) เรียงชั้นยศ (สูง -> ต่ำ)
+  const wa = getRankWeightFromName(a.name);
+  const wb = getRankWeightFromName(b.name);
+  if (wa !== wb) return wa - wb;
+
+  // 3) ถ้าชั้นยศเท่ากัน เรียงตามชื่อ
+  return String(a.name || "").localeCompare(String(b.name || ""), "th");
+});
 
       window.print();
     }
