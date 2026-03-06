@@ -247,24 +247,57 @@ async function sendToGoogleCalendar(auth, shift, allShifts) {
   const calendar = google.calendar({ version: "v3", auth });
 
   const kp = allShifts.filter((s) => normalizeGroup(s.group_name) === "กองพัน").length;
-  const spk = allShifts.filter((s) => normalizeGroup(s.group_name) === "ศปก").length;
+const spk = allShifts.filter((s) => normalizeGroup(s.group_name) === "ศปก").length;
 
-  const supervisor = allShifts.find((s) =>
-    String(s.role_type || "").includes("นายทหารเวร")
-  );
+const shiftGroup = normalizeGroup(shift.group_name);
+const shiftRole = String(shift.role_type || "").trim();
 
-  let summary;
-  let description;
+// ✅ หานายทหารเวร "เฉพาะกลุ่มเดียวกัน"
+const supervisor = allShifts.find((s) => {
+  const sameGroup = normalizeGroup(s.group_name) === shiftGroup;
+  const sameSupervisorRole = String(s.role_type || "").includes("นายทหารเวร");
+  return sameGroup && sameSupervisorRole;
+});
 
-  if (String(shift.role_type || "").includes("นายทหารเวร")) {
-    summary = `🛡️ เวร: ${shift.role_type}`;
-    description = `📊 ยอดเวรวันนี้: กองพัน ${kp} นาย / ศปก ${spk} นาย`;
+let summary;
+let description;
+let location = "";
+
+  // ===== นายทหารเวร =====
+if (shiftRole.includes("นายทหารเวร")) {
+  if (shiftGroup === "กองพัน") {
+    summary = `🛡️ นายทหารเวรกองพัน`;
+    description = `ยอดกำลังพลกองพันวันนี้ ${kp} นาย`;
+    location = "กองพัน";
+  } else if (shiftGroup === "ศปก") {
+    summary = `🛡️ นายทหารเวร ศปก.`;
+    description = `ยอดกำลังพล ศปก. วันนี้ ${spk} นาย`;
+    location = "ศปก.";
   } else {
-    summary = `💂 เวร: ${shift.role_type}`;
-    description = `👤 นายทหารเวร: ${
-      supervisor ? supervisor.rank_name : "ยังไม่ระบุ"
-    }`;
+    summary = `🛡️ ${shiftRole}`;
+    description = `ยอดกำลังพลวันนี้ ${allShifts.length} นาย`;
+    location = shift.group_name || "";
   }
+}
+
+// ===== เวรวิทยุ =====
+else if (shiftRole.includes("เวรวิทยุ")) {
+  const turnText = shift.shift_turn ? ` (ผลัด ${shift.shift_turn})` : "";
+  summary = `💂 เวรวิทยุ${turnText}`;
+  description = `วันนี้เข้าเวร\n👤 นายทหารเวร${shiftGroup ? " " + shift.group_name : ""}: ${
+    supervisor ? supervisor.rank_name : "ยังไม่ระบุ"
+  }`;
+  location = shift.group_name || "ศปก.";
+}
+
+// ===== เวรอื่น ๆ =====
+else {
+  summary = `💂 ${shiftRole}`;
+  description = `วันนี้เข้าเวร\n👤 นายทหารเวร${shiftGroup ? " " + shift.group_name : ""}: ${
+    supervisor ? supervisor.rank_name : "ยังไม่ระบุ"
+  }`;
+  location = shift.group_name || "";
+}
 
   const dateOnly =
     typeof shift.shift_date === "string"
@@ -290,15 +323,19 @@ async function sendToGoogleCalendar(auth, shift, allShifts) {
   }
 
   const event = {
-    summary,
-    description: `[ARMY_SHIFT]\n${description}${dashboardLine}`,
-    start: { dateTime: `${dateOnly}T08:00:00`, timeZone: "Asia/Bangkok" },
-    end: { dateTime: `${dateOnly}T09:00:00`, timeZone: "Asia/Bangkok" },
-    reminders: {
-      useDefault: false,
-      overrides: [{ method: "popup", minutes: 60 }],
-    },
-  };
+  summary,
+  location,
+  description: `[ARMY_SHIFT]\n${description}${dashboardLine}`,
+  start: { dateTime: `${dateOnly}T08:00:00`, timeZone: "Asia/Bangkok" },
+  end: { dateTime: `${dateOnly}T10:00:00`, timeZone: "Asia/Bangkok" },
+  reminders: {
+    useDefault: false,
+    overrides: [
+      { method: "popup", minutes: 60 }, // 07:00 เตือนก่อนเข้าเวร
+      { method: "popup", minutes: 0 }   // 08:00 ตอนเริ่มเวร
+    ],
+  },
+};
 
   // 🔎 ค้นหา event เก่าที่ระบบนี้เคยสร้างไว้ในวันเดียวกัน
   const existing = await calendar.events.list({
