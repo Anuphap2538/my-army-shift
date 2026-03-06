@@ -574,53 +574,63 @@ function getRankWeightFromName(fullName){
   return 9999; // ไม่รู้ยศ -> ไปท้ายสุด
 }
     function prepareAndPrint(){
-      const monthLabel = document.getElementById("monthSelect").options[document.getElementById("monthSelect").selectedIndex].text;
-      const year = FIX_YEAR;
+  const monthLabel = document.getElementById("monthSelect").options[
+    document.getElementById("monthSelect").selectedIndex
+  ].text;
+  const year = FIX_YEAR;
 
-      document.getElementById("printSubTitle").innerText =
-        `กลุ่มงาน: ${currentGroup} | ประจำเดือน ${monthLabel} ${year + 543}`;
+  document.getElementById("printSubTitle").innerText =
+    `กลุ่มงาน: ${currentGroup} | ประจำเดือน ${monthLabel} ${year + 543}`;
 
-      const body = document.getElementById("printTableBody");
-      body.innerHTML = "";
+  const body = document.getElementById("printTableBody");
+  body.innerHTML = "";
 
-      const summary = {};
-      Object.keys(fullData).forEach((day) => {
-        fullData[day].forEach((item) => {
-          let roleDisplay = getRole(item) || "(ไม่ระบุหน้าที่)";
+  const summary = {};
+  Object.keys(fullData).forEach((day) => {
+    fullData[day].forEach((item) => {
+      let roleDisplay = getRole(item) || "(ไม่ระบุหน้าที่)";
 
-// ✅ เฉพาะตอนพิมพ์: เวรวิทยุรวมผลัด ไม่ต้องแสดง (1)/(2)
-if (roleDisplay === "เวรวิทยุ") {
-  roleDisplay = "เวรวิทยุ";
-} else {
-  // หน้าที่อื่น ๆ ถ้าอยากโชว์ผลัด (มีแค่เวรวิทยุที่มีผลัดอยู่แล้ว) ก็ไม่ต้องทำอะไรเพิ่ม
-  // ปล่อยไว้ตามเดิม
+      // เฉพาะตอนพิมพ์: เวรวิทยุรวมผลัด
+      if (roleDisplay === "เวรวิทยุ") {
+        roleDisplay = "เวรวิทยุ";
+      }
+
+      const name = item.rank_name || item.name || "(ไม่ระบุชื่อ)";
+      const key = `${name}-${roleDisplay}`;
+
+      if (!summary[key]) summary[key] = { name, role: roleDisplay, days: [] };
+      summary[key].days.push(parseInt(day, 10));
+    });
+  });
+
+  const sortedPeople = Object.values(summary).sort((a, b) => {
+
+    // นายทหารเวรขึ้นก่อน
+    if ((a.role || "").includes("นายทหารเวร")) return -1;
+    if ((b.role || "").includes("นายทหารเวร")) return 1;
+
+    // เรียงชั้นยศ สูง -> ต่ำ
+    const wa = getRankWeightFromName(a.name);
+    const wb = getRankWeightFromName(b.name);
+    if (wa !== wb) return wa - wb;
+
+    // ถ้ายศเท่ากัน เรียงชื่อ
+    return String(a.name || "").localeCompare(String(b.name || ""), "th");
+  });
+
+  // ⭐ อันนี้ของสำคัญที่นายขาดอยู่
+  sortedPeople.forEach((p) => {
+    body.innerHTML += `
+      <tr>
+        <td>${p.name}</td>
+        <td>${p.role}</td>
+        <td>${p.days.sort((x, y) => x - y).join(", ")}</td>
+      </tr>
+    `;
+  });
+
+  window.print();
 }
-
-          const name = item.rank_name || item.name || "(ไม่ระบุชื่อ)";
-          const key = `${name}-${roleDisplay}`;
-
-          if (!summary[key]) summary[key] = { name, role: roleDisplay, days: [] };
-          summary[key].days.push(parseInt(day, 10));
-        });
-      });
-
-      const sortedPeople = Object.values(summary).sort((a, b) => {
-
-  // 1) นายทหารเวรขึ้นก่อนเสมอ
-  if ((a.role || "").includes("นายทหารเวร")) return -1;
-  if ((b.role || "").includes("นายทหารเวร")) return 1;
-
-  // 2) เรียงชั้นยศ (สูง -> ต่ำ)
-  const wa = getRankWeightFromName(a.name);
-  const wb = getRankWeightFromName(b.name);
-  if (wa !== wb) return wa - wb;
-
-  // 3) ถ้าชั้นยศเท่ากัน เรียงตามชื่อ
-  return String(a.name || "").localeCompare(String(b.name || ""), "th");
-});
-
-      window.print();
-    }
 
     async function syncAllToGoogle(){
       const btn = document.getElementById("syncBtn");
