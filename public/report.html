@@ -505,33 +505,43 @@
             roleDisplay = `${roleDisplay} (${d.shift_turn})`;
           }
 
-          const safeName = JSON.stringify(name);
+          const safeName = encodeURIComponent(name);
 
-          return `
-            <div class="duty-item">
-              <div>
-                <b>${name}</b><br>
-                <small>${roleDisplay}</small>
-              </div>
-              <button class="btn-del" onclick="deleteEntry(${d.id}, ${safeName}, ${day})">ลบ</button>
-            </div>
-          `;
+return `
+  <div class="duty-item">
+    <div>
+      <b>${name}</b><br>
+      <small>${roleDisplay}</small>
+    </div>
+    <button class="btn-del" onclick="deleteEntry(${d.id}, '${safeName}', ${day})">ลบ</button>
+  </div>
+`;
         }).join("");
       }
 
       document.getElementById("dutyModal").style.display = "flex";
     }
 
-    async function deleteEntry(id, name, day){
-      if (!confirm(`ลบ ${name}?`)) return;
-      const res = await fetch(`/delete-shift/${id}`, { method:"DELETE" });
-      if (res.ok){
-        await renderReport(currentGroup);
-        closeModal();
-      }else{
-        alert("❌ ลบไม่สำเร็จ");
-      }
+    async function deleteEntry(id, encodedName, day){
+  const name = decodeURIComponent(encodedName);
+
+  if (!confirm(`ลบ ${name}?`)) return;
+
+  try {
+    const res = await fetch(`/delete-shift/${id}`, { method: "DELETE" });
+    const msg = await res.text();
+
+    if (res.ok) {
+      await renderReport(currentGroup);
+      closeModal();
+    } else {
+      alert("❌ ลบไม่สำเร็จ: " + msg);
     }
+  } catch (err) {
+    console.error(err);
+    alert("❌ ลบไม่สำเร็จ (Server Error)");
+  }
+}
 
     function closeModal(){
       document.getElementById("dutyModal").style.display = "none";
@@ -540,38 +550,52 @@
     window.onclick = (e) => {
       if (e.target === document.getElementById("dutyModal")) closeModal();
     };
-    const RANK_PRIORITY = [
-  // นายทหารสัญญาบัตร (บนลงล่าง)
-  "พล.อ.อ.", "พล.อ.ท.", "พล.อ.ต.",
-  "น.อ.", "น.ท.", "น.ต.",
-  "ร.อ.", "ร.ท.", "ร.ต.",
+    const RANK_WEIGHT = {
+  "น.อ.": 1,
+  "น.ท.": 2,
+  "น.ต.": 3,
+  "ร.อ.": 4,
+  "ร.ท.": 5,
+  "ร.ต.": 6,
 
-  // นายทหารประทวน/สัญญาบัตรต่ำ (ปรับตามที่หน่วยใช้จริง)
-  "พ.อ.อ.", "พ.อ.ท.", "พ.อ.ต.",
-  "จ.อ.", "จ.ท.", "จ.ต."
- ];
+  "พ.อ.อ.": 7,
+  "พ.อ.ท.": 8,
+  "พ.อ.ต.": 9,
+  "จ.อ.": 10,
+  "จ.ท.": 11,
+  "จ.ต.": 12
+};
 
-// ทำให้รูปแบบยศเป็นมาตรฐานขึ้น (กันจุด/ช่องว่างเพี้ยน)
-function normalizeRankText(s){
+function normalizeRankText(s) {
   return String(s || "")
-    .replace(/\s+/g, " ")        // รวมช่องว่าง
-    .replace(/．/g, ".")         // กันจุด fullwidth
+    .replace(/\s+/g, " ")
+    .replace(/．/g, ".")
     .trim();
 }
 
-// ดึง “คำนำหน้ายศ” จากต้นชื่อ แล้วคืนลำดับ (เลขน้อย = ยศสูง)
-function getRankWeightFromName(fullName){
+function extractRankPrefix(fullName) {
   const name = normalizeRankText(fullName);
 
-  for (let i = 0; i < RANK_PRIORITY.length; i++){
-    const r = RANK_PRIORITY[i];
+  // เรียงจากยาวไปสั้น กันจับผิดตัว
+  const prefixes = Object.keys(RANK_WEIGHT).sort((a, b) => b.length - a.length);
 
-    // รองรับทั้งแบบ "น.อ.สมชาย" และ "น.อ. สมชาย"
-    if (name.startsWith(r) || name.startsWith(r + " ")){
-      return i;
+  for (const p of prefixes) {
+    if (
+      name.startsWith(p) ||
+      name.startsWith(p + " ") ||
+      name.startsWith(p + "หญิง") ||
+      name.startsWith(p + "ญ")
+    ) {
+      return p;
     }
   }
-  return 9999; // ไม่รู้ยศ -> ไปท้ายสุด
+
+  return "";
+}
+
+function getRankWeightFromName(fullName) {
+  const prefix = extractRankPrefix(fullName);
+  return RANK_WEIGHT[prefix] ?? 9999;
 }
     function prepareAndPrint(){
   const monthLabel = document.getElementById("monthSelect").options[
