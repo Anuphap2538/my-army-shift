@@ -15,14 +15,17 @@ app.use(express.static("public"));
 /* =========================
 SESSION
 ========================= */
+app.set("trust proxy", 1);
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "army-secret",
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     cookie: {
-      secure: false, // ถ้าใช้ https + custom domain ค่อยเปลี่ยน true
+      secure: false,
       httpOnly: true,
+      sameSite: "lax",
       maxAge: 86400000,
     },
   })
@@ -98,17 +101,38 @@ const oauth2Client = new google.auth.OAuth2(
 /* =========================
 GOOGLE LOGIN
 ========================= */
-app.get("/google/auth", (req, res) => {
-  const url = oauth2Client.generateAuthUrl({
-    access_type: "offline",
-    prompt: "consent",
-    scope: [
-      "https://www.googleapis.com/auth/calendar",
-      "https://www.googleapis.com/auth/userinfo.email",
-      "openid",
-    ],
-  });
-  res.redirect(url);
+app.get("/google/auth", async (req, res) => {
+  try {
+    const userId = req.query.user_id;
+
+    if (!userId) {
+      return res.status(400).send("ไม่พบ user_id");
+    }
+
+    req.session.pendingUserId = userId;
+
+    req.session.save((err) => {
+      if (err) {
+        console.error("SESSION SAVE ERROR:", err);
+        return res.status(500).send("Session Error");
+      }
+
+      const url = oauth2Client.generateAuthUrl({
+        access_type: "offline",
+        prompt: "consent",
+        scope: [
+          "https://www.googleapis.com/auth/calendar",
+          "https://www.googleapis.com/auth/userinfo.email",
+          "openid",
+        ],
+      });
+
+      res.redirect(url);
+    });
+  } catch (err) {
+    console.error("GOOGLE AUTH ERROR:", err);
+    res.status(500).send("Google Auth Error");
+  }
 });
 
 app.get("/login-redirect", async (req, res) => {
