@@ -6,36 +6,34 @@
     <title>Admin Control Panel | กองพันทหารอากาศโยธิน</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4f46e5">
     <style>
         :root {
-            --sidebar-color: rgba(15, 23, 42, 0.9); /* สีน้ำเงินเข้ม Slate */
-            --accent-color: #f1c40f; /* สีเหลืองทอง */
+            --sidebar-color: rgba(15, 23, 42, 0.9);
+            --accent-color: #f1c40f;
             --text-white: #ffffff;
         }
 
         body, html {
-            margin: 0; padding: 0;
+            margin: 0;
+            padding: 0;
             font-family: 'Sarabun', sans-serif;
             height: 100%;
             overflow: hidden;
         }
 
-        /* 🖼️ พื้นหลัง */
         .bg-container {
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
-            url('images/laius.jpg'); 
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+            url('images/laius.jpg');
             background-size: cover;
             background-position: center;
             z-index: -1;
         }
 
-        /* 👈 Sidebar */
         .sidebar {
             width: 260px;
             height: 100vh;
@@ -69,7 +67,11 @@
             font-size: 1.05em;
         }
 
-        .nav-item i { margin-right: 15px; width: 20px; text-align: center; }
+        .nav-item i {
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+        }
 
         .nav-item:hover {
             background: rgba(255,255,255,0.1);
@@ -77,18 +79,18 @@
             padding-left: 35px;
         }
 
-        /* 🔝 Header & Content Area */
         .main-wrapper {
             margin-left: 260px;
             height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow-y: auto; /* เพิ่มเพื่อให้เลื่อนดูการ์ดได้ถ้าจอน้อย */
+            overflow-y: auto;
         }
 
         .top-bar {
-            padding: 40px 60px;
+            padding: 20px 40px;
             color: white;
+            margin-bottom: 0;
         }
 
         .top-bar h1 {
@@ -132,57 +134,76 @@
             color: var(--accent-color);
         }
 
-        .portal-card h2 { margin: 10px 0; font-size: 1.5em; font-weight: 700; }
-        .portal-card p { color: #ccc; font-size: 0.95em; margin: 0; }
-        
-        .header-content {
-            display: flex;
-            align-items: center;
-            gap: 20px;
+        .portal-card h2 {
+            margin: 10px 0;
+            font-size: 1.5em;
+            font-weight: 700;
+        }
+
+        .portal-card p {
+            color: #ccc;
+            font-size: 0.95em;
+            margin: 0;
+        }
+
+        .credit-box {
+            margin: 10px 60px 40px 60px;
+            max-width: 980px;
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 25px;
+            padding: 28px 32px;
+            color: white;
+        }
+
+        .credit-box h3 {
+            margin: 0 0 12px 0;
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .credit-box p {
+            margin: 8px 0;
+            font-size: 1.15em;
+            color: #fff;
+        }
+
+        @media (max-width: 900px) {
+            body, html {
+                overflow: auto;
+            }
+
+            .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+            }
+
+            .main-wrapper {
+                margin-left: 0;
+                height: auto;
+            }
+
+            .portal-grid {
+                padding: 20px;
+            }
+
+            .credit-box {
+                margin: 10px 20px 30px 20px;
+            }
+
+            .top-bar {
+                padding: 20px;
+            }
+
+            .top-bar > div {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
         }
     </style>
-
-    <style>
-    /* ... (อ้างอิง Root สีเดิม) ... */
-
-    .top-navigation {
-        display: flex; flex-direction: column; gap: 16px; /* เรียงแนวตั้งบนมือถือ */
-        padding: 20px; border-radius: 20px; background: white;
-    }
-
-    .brand-area { display: flex; align-items: center; gap: 12px; }
-
-    /* ปรับปุ่มให้กดง่ายด้วยนิ้วโป้ง */
-    .controls-wrapper { 
-        display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; 
-    }
-
-    #monthSelect { 
-        grid-column: span 2; padding: 14px; font-size: 16px; border-radius: 12px; 
-    }
-
-    .btn-nav { 
-        padding: 12px 8px; font-size: 14px; border-radius: 12px; 
-        display: flex; align-items: center; justify-content: center; font-weight: 600;
-    }
-
-    .btn-sync-google { 
-        grid-column: span 2; padding: 16px; font-size: 15px; margin-top: 8px;
-    }
-
-    /* ปรับตารางปฏิทินแอดมินให้เล็กแต่ชัด */
-    .day-cell { 
-        min-height: 80px; font-size: 10px; border-radius: 12px; padding: 4px;
-    }
-    .badge-boss { font-size: 9px; padding: 2px 4px; border-radius: 6px; }
-    
-    /* ซ่อนส่วนที่ไม่จำเป็นบนมือถือเพื่อประหยัดพื้นที่ */
-    @media (max-width: 480px) {
-        .badge-count { font-size: 8px; }
-        .weekday { font-size: 10px; }
-    }
-</style>
-
 </head>
 <body>
 
@@ -193,28 +214,20 @@
             <i class="fas fa-user-gear" style="font-size: 3.5em; color: var(--accent-color);"></i>
             <h2 style="color: white; margin-top: 15px; font-size: 1.1em; letter-spacing: 1px;">สำหรับแอดมิน</h2>
         </div>
+
         <div class="nav-menu">
-            <a href="import.html" class="nav-item"><i class="fas fa-plus-square"></i> บันทึกเวรรายวัน (Index)</a>
+            <a href="import.html" class="nav-item"><i class="fas fa-plus-square"></i>อัพโหลดข้อมูล Excel</a>
             <a href="manage.html" class="nav-item"><i class="fas fa-tasks"></i> จัดการ/แก้ไขเวร (Manage)</a>
             <a href="report.html" class="nav-item"><i class="fas fa-file-contract"></i> สรุปรายงาน (Report)</a>
-            
-            <div style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding: 10px;">
-                <button onclick="copyInviteLink()" id="btnCopy" class="nav-item" style="background: none; border: none; width: 100%; cursor: pointer; text-align: left; color: #2ecc71;">
-                    <i class="fas fa-share-nodes"></i> <span id="copyText">ก๊อปปี้ลิงก์ส่ง LINE</span>
-                </button>
-                <a href="dashboard.html" class="nav-item" style="padding: 10px 25px; font-size: 0.9em; opacity: 0.6;">
-                    <i class="fas fa-eye"></i> ดูหน้าจอ Dashboard
-                </a>
-            </div>
         </div>
     </nav>
 
     <div class="main-wrapper">
-        <header class="top-bar" style="padding: 20px 40px; margin-bottom: 0;">
+        <header class="top-bar">
             <div style="display: flex; align-items: center; gap: 25px;">
-                <img src="images/air.png" alt="โลโก้กองพัน" 
+                <img src="images/air.png" alt="โลโก้กองพัน"
                      style="width: 140px; height: auto; filter: drop-shadow(3px 3px 10px rgba(0,0,0,0.6));">
-                
+
                 <div style="text-align: left;">
                     <h1 style="margin:0; font-size: 2.5em; font-weight: 700; text-shadow: 3px 3px 10px rgba(0,0,0,0.7); line-height: 1.1; color: #fff;">
                         ระบบบริหารจัดการตารางเวร
@@ -229,8 +242,8 @@
         <div class="portal-grid">
             <a href="import.html" class="portal-card">
                 <i class="fas fa-upload"></i>
-                <h2>นำเข้าข้อมูล</h2>
-                <p>อัปโหลด Excel รายชื่อทหาร</p>
+                <h2>อัพโหลดข้อมูล Excel</h2>
+                <p>นำเข้ารายชื่อกำลังพลจากไฟล์ Excel</p>
             </a>
 
             <a href="manage.html" class="portal-card">
@@ -244,36 +257,17 @@
                 <h2>สรุปรายงาน</h2>
                 <p>ตรวจสอบสถิติการเข้าเวร</p>
             </a>
+        </div>
 
-            <a href="dashboard.html" class="portal-card">
-                <i class="fas fa-desktop"></i>
-                <h2>หน้าจอแสดงผล</h2>
-                <p>เปิดหน้าปฏิทินให้กำลังพลดู</p>
-            </a>
+        <div class="credit-box">
+            <h3>ผู้จัดทำ</h3>
+            <p>น.ส.รพีพร กำแพงแก้ว</p>
+            <p>นายอนุภาพ ทองเชื้อ</p>
+
+            <h3 style="margin-top: 22px;">อาจารย์ที่ปรึกษา</h3>
+            <p>อ.พิชญา สุขปลั่ง</p>
         </div>
     </div>
-<script>
-function copyInviteLink() {
-    // 🚩 แก้จาก /login-redirect เป็น /google/auth
-    const inviteUrl = window.location.origin + "/google/auth";
-    
-    navigator.clipboard.writeText(inviteUrl).then(() => {
-        const copyText = document.getElementById('copyText');
-        const btn = document.getElementById('btnCopy');
-        
-        const originalText = copyText.innerText;
-        copyText.innerText = "✅ ก๊อปปี้สำเร็จ!";
-        btn.style.color = "#f1c40f"; 
-        
-        setTimeout(() => {
-            copyText.innerText = originalText;
-            btn.style.color = "#2ecc71"; 
-        }, 3000);
-    }).catch(err => {
-        // กรณี Browser ไม่รองรับ clipboard API
-        alert("ก๊อปปี้ลิงก์นี้ส่งให้ทหาร: " + window.location.origin + "/google/auth");
-    });
-}
-</script>
+
 </body>
 </html>
