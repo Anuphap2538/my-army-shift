@@ -527,6 +527,31 @@ app.delete("/clear-all-users", async (req, res) => clearAllUsersImpl(res));
 app.get("/clear-all-users", async (req, res) => clearAllUsersImpl(res)); // backward compat
 
 /* =========================
+API: MY DUTY
+========================= */
+app.get("/get-my-duty", async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const [rows] = await pool.execute(
+      `SELECT s.*, u.rank_name
+       FROM shift_assignments s
+       JOIN users u ON s.user_id = u.id
+       WHERE s.user_id = ?
+       ORDER BY s.shift_date`,
+      [req.session.userId]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("GET MY DUTY ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* =========================
 PROFILE + HEALTH
 ========================= */
 app.get("/api/my-profile", (req, res) => {

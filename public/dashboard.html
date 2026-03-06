@@ -131,42 +131,50 @@
     const MONTH = 2; // มีนาคม
     const holidays = { "2026-03-03": "วันมาฆบูชา", "2026-03-04": "วันหยุดชดเชยมาฆบูชา" };
 
+    function sameName(a, b) {
+        return String(a || "").replace(/\s+/g, '') === String(b || "").replace(/\s+/g, '');
+    }
+
     async function init() {
         try {
-            // 1. ดึง Profile
             const res = await fetch('/api/my-profile');
-            if (res.status === 401) { window.location.href = '/google/auth'; return; }
-            const userData = await res.json(); 
-            currentUserName = userData.rank_name; 
-            document.getElementById('userNameDisplay').innerText = currentUserName;
+            if (res.status === 401) {
+                window.location.href = '/google/auth';
+                return;
+            }
 
-            // 2. ดึงรายการเวร
+            const userData = await res.json();
+            currentUserName = userData.name || "";
+            document.getElementById('userNameDisplay').innerText = currentUserName || "ไม่พบชื่อผู้ใช้";
+
             const sRes = await fetch('/get-my-duty');
+            if (!sRes.ok) throw new Error("โหลดเวรไม่สำเร็จ");
             const myShifts = await sRes.json();
-            
+
             scheduleData = {};
             if (Array.isArray(myShifts)) {
                 myShifts.forEach(s => {
-                    const dateStr = s.shift_date.split('T')[0]; 
+                    const dateStr = String(s.shift_date).split('T')[0];
                     if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
                     
                     scheduleData[dateStr].push({ 
-                        name: s.rank_name || s.role_type || "เจ้าหน้าที่", 
-                        role: s.role_type,
-                        turn: parseInt(s.shift_turn || 1) // เก็บเลขผลัดไว้แยก
+                        name: s.rank_name || "เจ้าหน้าที่", 
+                        role: s.role_type || "",
+                        turn: parseInt(s.shift_turn || 1)
                     });
                 });
             }
+
             renderCalendar();
         } catch(e) { 
             console.error("Init Error:", e);
+            document.getElementById('userNameDisplay').innerText = "โหลดข้อมูลไม่สำเร็จ";
             renderCalendar(); 
         }
     }
 
     function renderCalendar() {
         const grid = document.getElementById('calendarGrid');
-        const selectedUser = currentUserName; 
         grid.innerHTML = '';
 
         const firstDay = new Date(YEAR, MONTH, 1).getDay();
@@ -193,7 +201,7 @@
             cell.innerHTML = `<span class="${colorClass}">${i}</span>${holidayName ? `<span class="holiday-name">${holidayName}</span>` : ''}`;
 
             const duties = scheduleData[dateStr] || [];
-            const isMe = duties.some(d => d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, ''));
+            const isMe = duties.some(d => sameName(d.name, currentUserName));
 
             if (isMe) {
                 cell.classList.add('duty-active'); 
@@ -211,17 +219,19 @@
     function showInfo(day, dateStr, holidayName, duties) {
         const modal = document.getElementById('dutyModal');
         const list = document.getElementById('partnerList');
-        const selectedUser = currentUserName;
 
-        const myDuties = duties.filter(d => d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, ''));
-        
-        // จุดล็อค: ถ้าไม่ใช่เวรเรา ห้ามเปิด Modal
+        const myDuties = duties.filter(d => sameName(d.name, currentUserName));
         if (myDuties.length === 0) return; 
         
         modal.style.display = 'flex';
         document.getElementById('displayDate').innerText = `วันที่ ${day} มีนาคม 2569 ${holidayName ? '('+holidayName+')' : ''}`;
 
-        const orderKongPan = ["นายทหารเวรกองพัน", "จ่าเวรร้อย สนน.", "จ่าเวรร้อย รก.", "จ่าเวรร้อย ทย.", "จ่าเวรร้อย ตอ.", "จ่าเวรหน่วยฝึกทหารใหม่", "จ่าเวร มว.สุนัขทหาร", "จ่าเวร ขส.", "จ่าเวรสูทกรรม"];
+        const orderKongPan = [
+            "นายทหารเวรกองพัน", "จ่าเวรร้อย สนน.", "จ่าเวรร้อย รก.", "จ่าเวรร้อย ทย.",
+            "จ่าเวรร้อย ตอ.", "จ่าเวรหน่วยฝึกทหารใหม่", "จ่าเวร มว.สุนัขทหาร",
+            "จ่าเวร ขส.", "จ่าเวรสูทกรรม"
+        ];
+
         const orderSPK = [
             { label: "นายทหารเวร ศปก.", role: "นายทหารเวร ศปก.", turn: 1 },
             { label: "เวรวิทยุ ผลัด 1", role: "เวรวิทยุ", turn: 1 },
@@ -232,8 +242,8 @@
             { label: "เวรสายตรวจสุนัขทหาร", role: "เวรสายตรวจสุนัขทหาร", turn: 1 }
         ];
 
-        const amIKongPan = myDuties.some(d => orderKongPan.some(role => d.role.includes(role)));
-        const amISPK = myDuties.some(d => orderSPK.some(item => d.role.includes(item.role)) || d.role.includes("วิทยุ"));
+        const amIKongPan = myDuties.some(d => orderKongPan.some(role => String(d.role).includes(role)));
+        const amISPK = myDuties.some(d => orderSPK.some(item => String(d.role).includes(item.role)) || String(d.role).includes("วิทยุ"));
 
         let showKP = true, showSPK = true;
         if (amIKongPan && !amISPK) showSPK = false; 
@@ -243,15 +253,15 @@
         let html = `<div style="display: grid; ${gridStyle} gap: 20px;">`;
         
         const findDuty = (roleName) => duties.find(d => 
-            d.role.replace(/\s+/g, '').includes(roleName.replace(/\s+/g, '')) || 
-            roleName.replace(/\s+/g, '').includes(d.role.replace(/\s+/g, ''))
+            String(d.role).replace(/\s+/g, '').includes(roleName.replace(/\s+/g, '')) || 
+            roleName.replace(/\s+/g, '').includes(String(d.role).replace(/\s+/g, ''))
         );
 
         if (showKP) {
             html += `<div><h4 style="color:#f1c40f; border-bottom:2px solid rgba(241, 196, 15, 0.3); margin: 0 0 15px 0; padding-bottom: 5px; font-size:1.1em;">🛡️ กองพัน</h4>`;
             orderKongPan.forEach(role => {
                 const d = findDuty(role);
-                const isMeLine = d && d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, '');
+                const isMeLine = d && sameName(d.name, currentUserName);
                 html += `<div style="margin-bottom:12px;">
                             <span style="font-size:0.8em; color:#94a3b8; display:block;">${role}</span>
                             <span style="font-size:1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold;' : 'color:#fff;'}">${d ? d.name : '-'}</span>
@@ -264,10 +274,10 @@
             html += `<div><h4 style="color:#3b82f6; border-bottom:2px solid rgba(59, 130, 246, 0.3); margin: 0 0 15px 0; padding-bottom: 5px; font-size:1.1em;">📡 ศปก.</h4>`;
             orderSPK.forEach(item => {
                 const d = duties.find(duty => 
-                    duty.role.includes(item.role) && 
+                    String(duty.role).includes(item.role) && 
                     parseInt(duty.turn || 1) === item.turn
                 );
-                const isMeLine = d && d.name.replace(/\s+/g, '') === selectedUser.replace(/\s+/g, '');
+                const isMeLine = d && sameName(d.name, currentUserName);
                 html += `<div style="margin-bottom:12px;">
                             <span style="font-size:0.8em; color:#94a3b8; display:block;">${item.label}</span>
                             <span style="font-size:1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold;' : 'color:#fff;'}">${d ? d.name : '-'}</span>
@@ -275,12 +285,14 @@
             });
             html += `</div>`;
         }
+
         html += `</div>`;
-        list.innerHTML = html; // แสดงผล HTML เข้าไปใน Modal
+        list.innerHTML = html;
     }
 
     function closeModal() { document.getElementById('dutyModal').style.display = 'none'; }
     window.onclick = function(event) { if (event.target == document.getElementById('dutyModal')) closeModal(); }
+
     init();
 </script>
 
