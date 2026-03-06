@@ -533,7 +533,7 @@ return `
 
     if (res.ok) {
       await renderReport(currentGroup);
-      closeModal();
+      openModal(day);   // ✅ เปิด popup วันเดิมกลับมาใหม่
     } else {
       alert("❌ ลบไม่สำเร็จ: " + msg);
     }
