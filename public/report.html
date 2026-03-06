@@ -550,47 +550,31 @@ return `
     window.onclick = (e) => {
       if (e.target === document.getElementById("dutyModal")) closeModal();
     };
-    const RANK_WEIGHT = {
-  "น.อ.": 1,
-  "น.ท.": 2,
-  "น.ต.": 3,
-  "ร.อ.": 4,
-  "ร.ท.": 5,
-  "ร.ต.": 6,
-
-  "พ.อ.อ.": 7,
-  "พ.อ.ท.": 8,
-  "พ.อ.ต.": 9,
-  "จ.อ.": 10,
-  "จ.ท.": 11,
-  "จ.ต.": 12
-};
-
-function normalizeRankText(s) {
+    function normalizeRankText(s) {
   return String(s || "")
     .replace(/\s+/g, " ")
     .replace(/．/g, ".")
     .trim();
 }
 
-function extractRankPrefix(fullName) {
+function getRankWeightFromName(fullName) {
   const name = normalizeRankText(fullName);
 
-  // เรียงจากยาวไปสั้น กันจับผิดตัว
-  const prefixes = Object.keys(RANK_WEIGHT).sort((a, b) => b.length - a.length);
+  // ✅ ลำดับยศที่ต้องการจริง
+  if (name.startsWith("น.ต.")) return 1;
+  if (name.startsWith("ร.อ.")) return 2;
+  if (name.startsWith("ร.ท.")) return 3;
+  if (name.startsWith("ร.ต.")) return 4;
 
-  for (const p of prefixes) {
-    if (
-      name.startsWith(p) ||
-      name.startsWith(p + " ") ||
-      name.startsWith(p + "หญิง") ||
-      name.startsWith(p + "ญ")
-    ) {
-      return p;
-    }
-  }
+  // ✅ ประทวน (ของนายเรียงถูกอยู่แล้ว)
+  if (name.startsWith("พ.อ.อ.")) return 5;
+  if (name.startsWith("พ.อ.ท.")) return 6;
+  if (name.startsWith("พ.อ.ต.")) return 7;
+  if (name.startsWith("จ.อ.")) return 8;
+  if (name.startsWith("จ.ท.")) return 9;
+  if (name.startsWith("จ.ต.")) return 10;
 
-  return "";
+  return 9999;
 }
 
 function getRankWeightFromName(fullName) {
