@@ -185,6 +185,39 @@ app.get("/login-redirect", async (req, res) => {
       [email, JSON.stringify(tokens), dashboardToken, pendingUserId]
     );
 
+        // 🚀 Sync เวรของคนนี้เข้า Google Calendar ทันทีหลัง login สำเร็จ
+    const [myShifts] = await pool.execute(
+      `SELECT s.*, u.rank_name, u.email
+       FROM shift_assignments s
+       JOIN users u ON s.user_id = u.id
+       WHERE s.user_id = ?`,
+      [pendingUserId]
+    );
+
+    for (const shift of myShifts) {
+      try {
+        const auth = buildAuthFromToken(JSON.stringify(tokens));
+
+        // เอาเวรของ "วันเดียวกัน" มาคำนวณ description ให้ถูก
+        const dateKey =
+          typeof shift.shift_date === "string"
+            ? shift.shift_date.split("T")[0]
+            : new Date(shift.shift_date).toISOString().split("T")[0];
+
+        const [dayShifts] = await pool.execute(
+          `SELECT s.*, u.rank_name, u.email
+           FROM shift_assignments s
+           JOIN users u ON s.user_id = u.id
+           WHERE DATE(s.shift_date) = ?`,
+          [dateKey]
+        );
+
+        await sendToGoogleCalendar(auth, shift, dayShifts);
+      } catch (e) {
+        console.log("AUTO SYNC ERROR:", e.message);
+      }
+    }
+
     req.session.userId = rows[0].id;
     req.session.userName = rows[0].rank_name;
     req.session.userEmail = email;
