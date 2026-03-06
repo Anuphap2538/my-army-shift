@@ -577,10 +577,6 @@ function getRankWeightFromName(fullName) {
   return 9999;
 }
 
-function getRankWeightFromName(fullName) {
-  const prefix = extractRankPrefix(fullName);
-  return RANK_WEIGHT[prefix] ?? 9999;
-}
     function prepareAndPrint(){
   const monthLabel = document.getElementById("monthSelect").options[
     document.getElementById("monthSelect").selectedIndex
