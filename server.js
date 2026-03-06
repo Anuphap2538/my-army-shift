@@ -258,7 +258,7 @@ async function sendToGoogleCalendar(auth, shift, allShifts) {
 
   const event = {
     summary,
-    description: `${description}${dashboardLine}`,
+    description: `[ARMY_SHIFT]\n${description}${dashboardLine}`,
     start: { dateTime: `${dateOnly}T08:00:00`, timeZone: "Asia/Bangkok" },
     end: { dateTime: `${dateOnly}T09:00:00`, timeZone: "Asia/Bangkok" },
     reminders: {
@@ -267,6 +267,37 @@ async function sendToGoogleCalendar(auth, shift, allShifts) {
     },
   };
 
+  // 🔎 ค้นหา event เก่าที่ระบบนี้เคยสร้างไว้ในวันเดียวกัน
+  const existing = await calendar.events.list({
+    calendarId: "primary",
+    timeMin: `${dateOnly}T00:00:00+07:00`,
+    timeMax: `${dateOnly}T23:59:59+07:00`,
+    q: "ARMY_SHIFT",
+  });
+
+  // 🗑 ลบเฉพาะ event เก่าที่เป็นของระบบเรา และ role ตรงกัน
+  if (existing.data.items && existing.data.items.length > 0) {
+    for (const ev of existing.data.items) {
+      const evDesc = ev.description || "";
+      const evSummary = ev.summary || "";
+
+      const sameSystem = evDesc.includes("[ARMY_SHIFT]");
+      const sameRole = evSummary.includes(String(shift.role_type || ""));
+
+      if (sameSystem && sameRole) {
+        try {
+          await calendar.events.delete({
+            calendarId: "primary",
+            eventId: ev.id,
+          });
+        } catch (err) {
+          console.log("Delete old event error:", err.message);
+        }
+      }
+    }
+  }
+
+  // ➕ สร้าง event ใหม่
   return calendar.events.insert({
     calendarId: "primary",
     resource: event,
