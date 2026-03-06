@@ -6,104 +6,184 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#4f46e5">
-   <style>
-    :root {
-        --primary: #3b82f6;
-        --primary-dark: #1e40af;
-        --success: #10b981;
-        --danger: #ef4444;
-        /* ปรับให้ขาวจางๆ เห็นพื้นหลัง (0.4) */
-        --glass: rgba(255, 255, 255, 0.4); 
-        --border: rgba(255, 255, 255, 0.2);
-    }
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4f46e5">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1e40af;
+            --success: #10b981;
+            --danger: #ef4444;
+            --glass: rgba(255, 255, 255, 0.4);
+            --border: rgba(255, 255, 255, 0.2);
+        }
 
-    body {
-        font-family: 'Sarabun', sans-serif;
-        margin: 0; padding: 20px; min-height: 100vh;
-        /* ดึงรูป pa.jpg มาใช้ และลดความเข้มสีทับหน้าลงเหลือ 0.3 */
-        background-image: linear-gradient(rgba(241, 245, 249, 0.3), rgba(241, 245, 249, 0.3)), 
-                          url('images/pa.jpg');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        position: relative;
-    }
+        body {
+            font-family: 'Sarabun', sans-serif;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            background-image: linear-gradient(rgba(241, 245, 249, 0.3), rgba(241, 245, 249, 0.3)),
+                              url('images/pa.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            position: relative;
+        }
 
-    /* ทำ Effect เบลอพื้นหลังให้ดูนุ่มนวล */
-    body::before {
-        content: "";
-        position: fixed; inset: 0;
-        background: inherit;
-        filter: blur(5px); /* ลดความเบลอลงเพื่อให้เห็นภาพชัดขึ้น */
-        z-index: -1;
-    }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background: inherit;
+            filter: blur(5px);
+            z-index: -1;
+        }
 
-    /* ปรับแต่ง Container ให้เป็นกระจกใสๆ (Glassmorphism) */
-    .container {
-        max-width: 1000px; 
-        margin: 0 auto; 
-        background: var(--glass);
-        backdrop-filter: blur(10px); 
-        -webkit-backdrop-filter: blur(10px);
-        border-radius: 25px; 
-        padding: 30px;
-        border: 1px solid var(--border);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    }
+        .app-container {
+            max-width: 1400px;
+            margin: auto;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+        }
 
-    /* ส่วนอื่นๆ เช่น Header ให้ปรับตามความสวยงาม */
-    .header {
-        background: var(--primary);
-        color: white;
-        padding: 20px;
-        border-radius: 15px;
-        margin-bottom: 25px;
-        text-align: center;
-    }
+        .sidebar {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            height: fit-content;
+        }
 
-    /* ปรับตารางให้โปร่งแสงนิดๆ ด้วยจะสวยมาก */
-    table {
-        width: 100%;
-        background: rgba(255, 255, 255, 0.5);
-        border-radius: 10px;
-        overflow: hidden;
-    }
-    
-    /* แบ่งฝั่งซ้าย (350px) และ ฝั่งขวา (ที่เหลือ) */
-    .app-container { 
-        max-width: 1400px; 
-        margin: auto; 
-        display: grid; 
-        grid-template-columns: 350px 1fr; 
-        gap: 20px; 
-    }
-    
-    .sidebar { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: fit-content; }
-    .main-content { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .main-content {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
 
-    /* คุมขนาดปุ่มทุกปุ่มใน Sidebar ให้เท่ากันเป๊ะ */
-    .btn-side { 
-        width: 100%; 
-        padding: 12px; 
-        border: none; 
-        border-radius: 10px; 
-        font-weight: 600; 
-        cursor: pointer; 
-        margin-bottom: 10px; 
-        font-family: inherit;
-        transition: 0.3s;
-    }
-    .form-group { margin-bottom: 20px; }
-    label { display: block; margin-bottom: 8px; font-weight: 600; color: #475569; }
-    select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-family: inherit; }
-</style>
+        .btn-side {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+            font-family: inherit;
+            transition: 0.3s;
+        }
+
+        .form-group { margin-bottom: 20px; }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #475569;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-family: inherit;
+        }
+
+        .help-box {
+            margin-top: 10px;
+            padding: 12px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 10px;
+            font-size: 13px;
+            color: #1e3a8a;
+        }
+
+        .day-count-badge {
+            display: inline-block;
+            margin-top: 4px;
+            padding: 2px 6px;
+            font-size: 11px;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: #0369a1;
+            font-weight: 700;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 520px;
+            border-radius: 25px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: var(--primary-dark);
+            color: white;
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 15px;
+            max-height: 420px;
+            overflow-y: auto;
+        }
+
+        .duty-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+            gap: 10px;
+        }
+
+        .btn-del {
+            color: #94a3b8;
+            background: #f1f5f9;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            flex: 0 0 auto;
+        }
+
+        .btn-del:hover {
+            color: white;
+            background: var(--danger);
+        }
+
+        @media (max-width: 960px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
 
 <div class="app-container">
     <div class="sidebar">
         <h2 style="color:var(--primary); margin-top:0;">📋 ลงข้อมูลเวร</h2>
-        
+
         <div class="form-group">
             <label>1. เลือกหน้าที่ (Role)</label>
             <select id="roleFilter" onchange="updateSelection()"></select>
@@ -112,7 +192,9 @@
         <div id="shiftSection" class="form-group" style="display:none; background:#eef2ff; padding:15px; border-radius:10px; border:1px solid #2563eb;">
             <label style="color: #2563eb;">🕒 เลือกผลัดที่จะลง</label>
             <select id="workShift">
-                <option value="1">ผลัด 1</option><option value="2">ผลัด 2</option><option value="3">ผลัด 3</option>
+                <option value="1">ผลัด 1</option>
+                <option value="2">ผลัด 2</option>
+                <option value="3">ผลัด 3</option>
             </select>
         </div>
 
@@ -124,16 +206,22 @@
         <div class="form-group">
             <label>3. สังกัด/กลุ่มงาน</label>
             <select id="groupFilter">
-                <option value="กองพัน">กองพัน</option><option value="ศปก">ศปก</option>
+                <option value="กองพัน">กองพัน</option>
+                <option value="ศปก">ศปก</option>
             </select>
         </div>
 
         <button class="btn-side" style="background: var(--primary); color: white;" onclick="saveShift()">💾 บันทึกการจัดเวร</button>
         <button class="btn-side" style="background: #facc15; color: #1e293b;" onclick="location.href='/'">🏠 กลับหน้าหลัก</button>
-        
+
         <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
             <button class="btn-side" style="background: #f97316; color: white;" onclick="clearAllShifts()">⚠️ ล้างข้อมูลเวร (ปฏิทิน)</button>
             <button class="btn-side" style="background: #ef4444; color: white;" onclick="clearAllUsers()">🗑️ ล้างรายชื่อทหาร (Excel)</button>
+        </div>
+
+        <div class="help-box">
+            • ลากเลือกวันที่เพื่อเตรียมบันทึกเวร<br>
+            • คลิกวันที่เพื่อดู/ลบรายชื่อเวรของวันนั้น
         </div>
     </div>
 
@@ -141,21 +229,42 @@
         <div id="calendar"></div>
     </div>
 </div>
+
+<div id="dutyModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle" style="margin:0; font-size:18px;">รายชื่อผู้เข้าเวร</h3>
+            <span style="cursor:pointer; font-size:30px; line-height:1;" onclick="closeModal()">&times;</span>
+        </div>
+        <div id="modalBody" class="modal-body"></div>
+        <div style="padding:15px; text-align:right; border-top:1px solid #eee;">
+            <button class="btn-side" style="background:#64748b; color:white; width:auto; margin:0;" onclick="closeModal()">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
 <script>
   let allUsers = [];
   let selectedData = {}; // { "YYYY-MM-DD": "shift_turn" }
   let calendar;
+  let fullData = {};     // { 1:[...], 2:[...] }
+  let currentYear;
+  let currentMonth;
 
   document.addEventListener("DOMContentLoaded", async () => {
-    // ===== Calendar =====
+    const today = new Date();
+    currentYear = today.getFullYear();
+    currentMonth = today.getMonth() + 1;
+
     const calendarEl = document.getElementById("calendar");
     calendar = new FullCalendar.Calendar(calendarEl, {
       initialView: "dayGridMonth",
       locale: "th",
       selectable: true,
       headerToolbar: { left: "prev,next today", center: "title", right: "" },
-      select: function (info) {
+
+      select: function(info) {
         const date = info.startStr;
         const role = document.getElementById("roleFilter").value || "";
         const currentShift = document.getElementById("workShift").value;
@@ -184,11 +293,22 @@
 
         calendar.unselect();
       },
-    });
-    calendar.render();
 
-    // ===== Load Users =====
+      dateClick: function(info) {
+        const clickedDay = Number(info.dateStr.split("-")[2]);
+        openModal(clickedDay);
+      },
+
+      datesSet: async function(info) {
+        currentYear = info.start.getFullYear();
+        currentMonth = info.start.getMonth() + 1;
+        await loadMonthShifts();
+      }
+    });
+
+    calendar.render();
     await loadUsers();
+    await loadMonthShifts();
   });
 
   async function loadUsers() {
@@ -196,11 +316,7 @@
       const res = await fetch("/get-users", { cache: "no-store" });
       const text = await res.text();
 
-      console.log("GET /get-users status:", res.status);
-      console.log("GET /get-users body:", text);
-
       if (!res.ok) throw new Error("API ERROR " + res.status);
-
       allUsers = JSON.parse(text);
 
       const roleSelect = document.getElementById("roleFilter");
@@ -212,10 +328,32 @@
       roles.forEach((r) => {
         roleSelect.innerHTML += `<option value="${r}">${r}</option>`;
       });
-
     } catch (e) {
       console.error("❌ โหลดข้อมูลล้มเหลว:", e);
       alert("❌ โหลดรายชื่อไม่สำเร็จ\nเปิด F12 → Console ดู error");
+    }
+  }
+
+  async function loadMonthShifts() {
+    try {
+      const res = await fetch(`/get-shifts?month=${currentMonth}&year=${currentYear}`, {
+        cache: "no-store"
+      });
+      const text = await res.text();
+      if (!res.ok) throw new Error(text || "โหลดเวรไม่สำเร็จ");
+
+      const rows = JSON.parse(text);
+
+      fullData = {};
+      rows.forEach(item => {
+        const day = Number(String(item.shift_date).split("T")[0].split("-")[2]);
+        if (!fullData[day]) fullData[day] = [];
+        fullData[day].push(item);
+      });
+
+      refreshAllCalendarCells();
+    } catch (err) {
+      console.error("LOAD MONTH SHIFTS ERROR:", err);
     }
   }
 
@@ -225,8 +363,6 @@
     const shiftSection = document.getElementById("shiftSection");
 
     userSelect.innerHTML = '<option value="">-- เลือกชื่อคน --</option>';
-
-    // โชว์ช่องเลือกผลัดเฉพาะวิทยุ
     shiftSection.style.display = role.includes("วิทยุ") ? "block" : "none";
 
     const filtered = allUsers.filter(
@@ -282,14 +418,150 @@
     }
 
     if (success > 0) {
-      alert(`✅ บันทึกสำเร็จ ${success} รายการ` + (failed ? `\n⚠️ ไม่สำเร็จ ${failed} รายการ (ดู Console)` : ""));
+      alert(`✅ บันทึกสำเร็จ ${success} รายการ` + (failed ? `\n⚠️ ไม่สำเร็จ ${failed} รายการ` : ""));
+      selectedData = {};
+      await loadMonthShifts();
       location.reload();
     } else {
       alert("❌ บันทึกไม่สำเร็จ (เปิด F12 ดู Console/Network)");
     }
   }
 
-  // ✅ ล้างเวรให้ตรงกับ server: DELETE /clear-all-shifts
+  function openModal(day) {
+    const modalTitle = document.getElementById("modalTitle");
+    const modalBody = document.getElementById("modalBody");
+
+    modalTitle.innerText = `รายชื่อเวร วันที่ ${day}`;
+    const dayData = fullData[day] || [];
+
+    if (dayData.length === 0) {
+      modalBody.innerHTML = '<p style="text-align:center; padding:30px;">ไม่มีข้อมูล</p>';
+    } else {
+      const sortedEntries = [...dayData].sort((a, b) => {
+        const ar = a.role_type || a.role || "";
+        const br = b.role_type || b.role || "";
+
+        if (ar.includes("นายทหารเวร")) return -1;
+        if (br.includes("นายทหารเวร")) return 1;
+
+        if (ar.includes("เวรวิทยุ") && br.includes("เวรวิทยุ")) {
+          return (a.shift_turn || 0) - (b.shift_turn || 0);
+        }
+        return 0;
+      });
+
+      modalBody.innerHTML = sortedEntries.map(d => {
+        let roleDisplay = d.role_type || d.role || "-";
+        if (roleDisplay === "เวรวิทยุ" && d.shift_turn) {
+          roleDisplay = `${roleDisplay} (${d.shift_turn})`;
+        }
+
+        const safeName = encodeURIComponent(d.rank_name || "");
+
+        return `
+          <div class="duty-item" id="shift-${d.id}">
+            <div>
+              <b>${d.rank_name || "-"}</b><br>
+              <small>${roleDisplay}</small>
+            </div>
+            <button
+              type="button"
+              class="btn-del"
+              onclick="deleteEntry(${d.id}, '${safeName}', ${day})"
+            >
+              ลบ
+            </button>
+          </div>
+        `;
+      }).join("");
+    }
+
+    document.getElementById("dutyModal").style.display = "flex";
+  }
+
+  async function deleteEntry(id, encodedName, day) {
+    const name = decodeURIComponent(encodedName || "");
+
+    if (!confirm(`ลบ ${name} ?`)) return;
+
+    try {
+      const res = await fetch(`/delete-shift/${id}`, {
+        method: "DELETE"
+      });
+
+      const msg = await res.text();
+
+      if (!res.ok) {
+        alert("❌ ลบไม่สำเร็จ: " + msg);
+        return;
+      }
+
+      if (fullData[day]) {
+        fullData[day] = fullData[day].filter(item => item.id !== id);
+      }
+
+      const row = document.getElementById(`shift-${id}`);
+      if (row) row.remove();
+
+      const modalBody = document.getElementById("modalBody");
+      if (fullData[day] && fullData[day].length === 0) {
+        modalBody.innerHTML = '<p style="text-align:center; padding:30px;">ไม่มีข้อมูล</p>';
+      }
+
+      refreshCalendarCell(day);
+
+    } catch (err) {
+      console.error(err);
+      alert("❌ ลบไม่สำเร็จ (Server Error)");
+    }
+  }
+
+  function refreshCalendarCell(day) {
+    const cells = document.querySelectorAll("[data-date]");
+    const monthStr = String(currentMonth).padStart(2, "0");
+    const dayStr = String(day).padStart(2, "0");
+    const targetDate = `${currentYear}-${monthStr}-${dayStr}`;
+
+    let targetCell = null;
+
+    cells.forEach(cell => {
+      if (cell.getAttribute("data-date") === targetDate) {
+        targetCell = cell;
+      }
+    });
+
+    if (!targetCell) return;
+
+    const oldBadge = targetCell.querySelector(".day-count-badge");
+    if (oldBadge) oldBadge.remove();
+
+    const count = (fullData[day] || []).length;
+    if (count > 0) {
+      targetCell.insertAdjacentHTML(
+        "beforeend",
+        `<div class="day-count-badge">มีเวร ${count}</div>`
+      );
+    }
+  }
+
+  function refreshAllCalendarCells() {
+    document.querySelectorAll(".day-count-badge").forEach(el => el.remove());
+
+    Object.keys(fullData).forEach(day => {
+      refreshCalendarCell(Number(day));
+    });
+  }
+
+  function closeModal() {
+    document.getElementById("dutyModal").style.display = "none";
+  }
+
+  window.onclick = function(event) {
+    if (event.target === document.getElementById("dutyModal")) {
+      closeModal();
+    }
+  };
+
   async function clearAllShifts() {
     if (!confirm("⚠️ ยืนยันการลบข้อมูลเวรทั้งหมด?\n(รายชื่อคนจะยังอยู่เหมือนเดิม)")) return;
 
@@ -307,7 +579,6 @@
     }
   }
 
-  // ✅ ล้างรายชื่อให้ตรงกับ server: DELETE /clear-all-users
   async function clearAllUsers() {
     if (!confirm("🚨 ยืนยันลบรายชื่อทหารทั้งหมด?")) return;
 
@@ -326,13 +597,4 @@
   }
 </script>
 </body>
-
 </html>
-
-
-
-
-
-
-
-
