@@ -29,7 +29,6 @@
         }
 
         .container { max-width: 600px; margin: 0 auto; position: relative; z-index: 1; }
-
         .card { 
             background: var(--glass) !important; 
             backdrop-filter: blur(10px);
@@ -126,10 +125,16 @@
 
 <script>
     let scheduleData = {};
-    let currentUserName = ""; 
+    let currentUserName = "";
     const YEAR = 2026;
-    const MONTH = 2; // มีนาคม
-    const holidays = { "2026-03-03": "วันมาฆบูชา", "2026-03-04": "วันหยุดชดเชยมาฆบูชา" };
+    const MONTH = 2;
+    const holidays = {
+        "2026-03-03": "วันมาฆบูชา",
+        "2026-03-04": "วันหยุดชดเชยมาฆบูชา"
+    };
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token") || "";
 
     function sameName(a, b) {
         return String(a || "").replace(/\s+/g, '') === String(b || "").replace(/\s+/g, '');
@@ -137,7 +142,12 @@
 
     async function init() {
         try {
-            const res = await fetch('/api/my-profile');
+            const profileUrl = token
+                ? `/api/my-profile?token=${encodeURIComponent(token)}`
+                : `/api/my-profile`;
+
+            const res = await fetch(profileUrl);
+
             if (res.status === 401) {
                 window.location.href = '/google/auth';
                 return;
@@ -147,8 +157,13 @@
             currentUserName = userData.name || "";
             document.getElementById('userNameDisplay').innerText = currentUserName || "ไม่พบชื่อผู้ใช้";
 
-            const sRes = await fetch('/get-my-duty');
+            const dutyUrl = token
+                ? `/get-my-duty?token=${encodeURIComponent(token)}`
+                : `/get-my-duty`;
+
+            const sRes = await fetch(dutyUrl);
             if (!sRes.ok) throw new Error("โหลดเวรไม่สำเร็จ");
+
             const myShifts = await sRes.json();
 
             scheduleData = {};
@@ -156,9 +171,9 @@
                 myShifts.forEach(s => {
                     const dateStr = String(s.shift_date).split('T')[0];
                     if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
-                    
-                    scheduleData[dateStr].push({ 
-                        name: s.rank_name || "เจ้าหน้าที่", 
+
+                    scheduleData[dateStr].push({
+                        name: s.rank_name || "เจ้าหน้าที่",
                         role: s.role_type || "",
                         turn: parseInt(s.shift_turn || 1)
                     });
@@ -166,10 +181,10 @@
             }
 
             renderCalendar();
-        } catch(e) { 
+        } catch (e) {
             console.error("Init Error:", e);
             document.getElementById('userNameDisplay').innerText = "โหลดข้อมูลไม่สำเร็จ";
-            renderCalendar(); 
+            renderCalendar();
         }
     }
 
@@ -195,8 +210,8 @@
             cell.className = 'cell';
 
             let colorClass = "num";
-            if(dayOfWeek === 0 || holidayName) colorClass = "num sun-text";
-            else if(dayOfWeek === 6) colorClass = "num sat-text";
+            if (dayOfWeek === 0 || holidayName) colorClass = "num sun-text";
+            else if (dayOfWeek === 6) colorClass = "num sat-text";
 
             cell.innerHTML = `<span class="${colorClass}">${i}</span>${holidayName ? `<span class="holiday-name">${holidayName}</span>` : ''}`;
 
@@ -204,10 +219,10 @@
             const isMe = duties.some(d => sameName(d.name, currentUserName));
 
             if (isMe) {
-                cell.classList.add('duty-active'); 
+                cell.classList.add('duty-active');
             } else if (duties.length > 0) {
                 const dot = document.createElement('div');
-                dot.className = 'duty-dot'; 
+                dot.className = 'duty-dot';
                 cell.appendChild(dot);
             }
 
@@ -221,15 +236,22 @@
         const list = document.getElementById('partnerList');
 
         const myDuties = duties.filter(d => sameName(d.name, currentUserName));
-        if (myDuties.length === 0) return; 
-        
+        if (myDuties.length === 0) return;
+
         modal.style.display = 'flex';
-        document.getElementById('displayDate').innerText = `วันที่ ${day} มีนาคม 2569 ${holidayName ? '('+holidayName+')' : ''}`;
+        document.getElementById('displayDate').innerText =
+            `วันที่ ${day} มีนาคม 2569 ${holidayName ? '(' + holidayName + ')' : ''}`;
 
         const orderKongPan = [
-            "นายทหารเวรกองพัน", "จ่าเวรร้อย สนน.", "จ่าเวรร้อย รก.", "จ่าเวรร้อย ทย.",
-            "จ่าเวรร้อย ตอ.", "จ่าเวรหน่วยฝึกทหารใหม่", "จ่าเวร มว.สุนัขทหาร",
-            "จ่าเวร ขส.", "จ่าเวรสูทกรรม"
+            "นายทหารเวรกองพัน",
+            "จ่าเวรร้อย สนน.",
+            "จ่าเวรร้อย รก.",
+            "จ่าเวรร้อย ทย.",
+            "จ่าเวรร้อย ตอ.",
+            "จ่าเวรหน่วยฝึกทหารใหม่",
+            "จ่าเวร มว.สุนัขทหาร",
+            "จ่าเวร ขส.",
+            "จ่าเวรสูทกรรม"
         ];
 
         const orderSPK = [
@@ -243,45 +265,49 @@
         ];
 
         const amIKongPan = myDuties.some(d => orderKongPan.some(role => String(d.role).includes(role)));
-        const amISPK = myDuties.some(d => orderSPK.some(item => String(d.role).includes(item.role)) || String(d.role).includes("วิทยุ"));
+        const amISPK = myDuties.some(d =>
+            orderSPK.some(item => String(d.role).includes(item.role)) || String(d.role).includes("วิทยุ")
+        );
 
         let showKP = true, showSPK = true;
-        if (amIKongPan && !amISPK) showSPK = false; 
+        if (amIKongPan && !amISPK) showSPK = false;
         if (amISPK && !amIKongPan) showKP = false;
 
         let gridStyle = (showKP && showSPK) ? "grid-template-columns: 1fr 1fr;" : "grid-template-columns: 1fr;";
         let html = `<div style="display: grid; ${gridStyle} gap: 20px;">`;
-        
-        const findDuty = (roleName) => duties.find(d => 
-            String(d.role).replace(/\s+/g, '').includes(roleName.replace(/\s+/g, '')) || 
+
+        const findDuty = (roleName) => duties.find(d =>
+            String(d.role).replace(/\s+/g, '').includes(roleName.replace(/\s+/g, '')) ||
             roleName.replace(/\s+/g, '').includes(String(d.role).replace(/\s+/g, ''))
         );
 
         if (showKP) {
-            html += `<div><h4 style="color:#f1c40f; border-bottom:2px solid rgba(241, 196, 15, 0.3); margin: 0 0 15px 0; padding-bottom: 5px; font-size:1.1em;">🛡️ กองพัน</h4>`;
+            html += `<div>
+                <h4 style="color:#f1c40f; border-bottom:2px solid rgba(241,196,15,0.3); margin:0 0 15px 0; padding-bottom:5px; font-size:1.1em;">🛡️ กองพัน</h4>`;
             orderKongPan.forEach(role => {
                 const d = findDuty(role);
                 const isMeLine = d && sameName(d.name, currentUserName);
                 html += `<div style="margin-bottom:12px;">
-                            <span style="font-size:0.8em; color:#94a3b8; display:block;">${role}</span>
-                            <span style="font-size:1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold;' : 'color:#fff;'}">${d ? d.name : '-'}</span>
-                         </div>`;
+                    <span style="font-size:0.8em; color:#94a3b8; display:block;">${role}</span>
+                    <span style="font-size:1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold;' : 'color:#fff;'}">${d ? d.name : '-'}</span>
+                </div>`;
             });
             html += `</div>`;
         }
 
         if (showSPK) {
-            html += `<div><h4 style="color:#3b82f6; border-bottom:2px solid rgba(59, 130, 246, 0.3); margin: 0 0 15px 0; padding-bottom: 5px; font-size:1.1em;">📡 ศปก.</h4>`;
+            html += `<div>
+                <h4 style="color:#3b82f6; border-bottom:2px solid rgba(59,130,246,0.3); margin:0 0 15px 0; padding-bottom:5px; font-size:1.1em;">📡 ศปก.</h4>`;
             orderSPK.forEach(item => {
-                const d = duties.find(duty => 
-                    String(duty.role).includes(item.role) && 
+                const d = duties.find(duty =>
+                    String(duty.role).includes(item.role) &&
                     parseInt(duty.turn || 1) === item.turn
                 );
                 const isMeLine = d && sameName(d.name, currentUserName);
                 html += `<div style="margin-bottom:12px;">
-                            <span style="font-size:0.8em; color:#94a3b8; display:block;">${item.label}</span>
-                            <span style="font-size:1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold;' : 'color:#fff;'}">${d ? d.name : '-'}</span>
-                         </div>`;
+                    <span style="font-size:0.8em; color:#94a3b8; display:block;">${item.label}</span>
+                    <span style="font-size:1em; ${isMeLine ? 'color:#f1c40f; font-weight:bold;' : 'color:#fff;'}">${d ? d.name : '-'}</span>
+                </div>`;
             });
             html += `</div>`;
         }
@@ -290,8 +316,13 @@
         list.innerHTML = html;
     }
 
-    function closeModal() { document.getElementById('dutyModal').style.display = 'none'; }
-    window.onclick = function(event) { if (event.target == document.getElementById('dutyModal')) closeModal(); }
+    function closeModal() {
+        document.getElementById('dutyModal').style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('dutyModal')) closeModal();
+    }
 
     init();
 </script>

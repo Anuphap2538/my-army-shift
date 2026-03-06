@@ -8,11 +8,17 @@ import crypto from "crypto";
 dotenv.config();
 
 const app = express();
-app.set("trust proxy", 1);
+
 
 function generateDashboardToken() {
   return crypto.randomBytes(32).toString("hex");
 }
+
+function buildDashboardUrl(token) {
+  const base = process.env.RENDER_EXTERNAL_URL || "http://localhost:3000";
+  return `${base}/dashboard.html?token=${token}`;
+}
+app.set("trust proxy", 1);
 
 app.use(express.json());
 app.use(express.static("public"));
@@ -20,7 +26,6 @@ app.use(express.static("public"));
 /* =========================
 SESSION
 ========================= */
-app.set("trust proxy", 1);
 
 app.use(
   session({
@@ -160,21 +165,8 @@ app.get("/login-redirect", async (req, res) => {
       version: "v2",
     });
 
-    app.get("/debug/user/:id", async (req, res) => {
-  try {
-    const [rows] = await pool.execute(
-      "SELECT id, rank_name, email, google_token, dashboard_token FROM users WHERE id=?",
-      [req.params.id]
-    );
-    res.json(rows[0] || null);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
     const userInfo = await oauth2.userinfo.get();
     const email = userInfo.data.email;
-
     const dashboardToken = generateDashboardToken();
 
     const [rows] = await pool.execute(
@@ -221,10 +213,8 @@ function buildAuthFromToken(tokenJson) {
 async function sendToGoogleCalendar(auth, shift, allShifts) {
   const calendar = google.calendar({ version: "v3", auth });
 
-  const kp = allShifts.filter((s) => normalizeGroup(s.group_name) === "กองพัน")
-    .length;
-  const spk = allShifts.filter((s) => normalizeGroup(s.group_name) === "ศปก")
-    .length;
+  const kp = allShifts.filter((s) => normalizeGroup(s.group_name) === "กองพัน").length;
+  const spk = allShifts.filter((s) => normalizeGroup(s.group_name) === "ศปก").length;
 
   const supervisor = allShifts.find((s) =>
     String(s.role_type || "").includes("นายทหารเวร")
@@ -243,15 +233,32 @@ async function sendToGoogleCalendar(auth, shift, allShifts) {
     }`;
   }
 
-  // กัน timezone เพี้ยน: ใช้วันที่จาก DB ตรงๆ ถ้าเป็น YYYY-MM-DD
   const dateOnly =
     typeof shift.shift_date === "string"
-      ? shift.shift_date
+      ? shift.shift_date.split("T")[0]
       : new Date(shift.shift_date).toISOString().split("T")[0];
+
+  let dashboardLine = "";
+  try {
+    const targetEmail = shift.email || null;
+
+    if (targetEmail) {
+      const [rows] = await pool.execute(
+        "SELECT dashboard_token FROM users WHERE email=?",
+        [targetEmail]
+      );
+
+      if (rows.length > 0 && rows[0].dashboard_token) {
+        dashboardLine = `\n\n📱 Dashboard ส่วนตัว:\n${buildDashboardUrl(rows[0].dashboard_token)}`;
+      }
+    }
+  } catch (e) {
+    console.error("DASHBOARD LINK ERROR:", e.message);
+  }
 
   const event = {
     summary,
-    description,
+    description: `${description}${dashboardLine}`,
     start: { dateTime: `${dateOnly}T08:00:00`, timeZone: "Asia/Bangkok" },
     end: { dateTime: `${dateOnly}T09:00:00`, timeZone: "Asia/Bangkok" },
     reminders: {
@@ -260,7 +267,10 @@ async function sendToGoogleCalendar(auth, shift, allShifts) {
     },
   };
 
-  return calendar.events.insert({ calendarId: "primary", resource: event });
+  return calendar.events.insert({
+    calendarId: "primary",
+    resource: event,
+  });
 }
 
 /* =========================
@@ -278,53 +288,6 @@ app.get("/get-users", async (req, res) => {
   } catch (err) {
     console.error("GET USERS ERROR:", err);
     res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/login-redirect", async (req, res) => {
-  try {
-    const code = req.query.code;
-    if (!code) return res.status(400).send("❌ Invalid Login Request");
-
-    const pendingUserId = req.session.pendingUserId;
-    if (!pendingUserId) {
-      return res.status(400).send("❌ ไม่พบข้อมูลผู้ใช้ที่เลือก");
-    }
-
-    const { tokens } = await oauth2Client.getToken(code);
-    oauth2Client.setCredentials(tokens);
-
-    const oauth2 = google.oauth2({ auth: oauth2Client, version: "v2" });
-    const userInfo = await oauth2.userinfo.get();
-    const email = userInfo.data.email;
-
-    const dashboardToken = generateDashboardToken();
-
-    const [rows] = await pool.execute(
-      "SELECT id, rank_name FROM users WHERE id=?",
-      [pendingUserId]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).send("❌ ไม่พบรายชื่อผู้ใช้ในระบบ");
-    }
-
-    await pool.execute(
-      `UPDATE users
-       SET email=?, google_token=?, dashboard_token=?
-       WHERE id=?`,
-      [email, JSON.stringify(tokens), dashboardToken, pendingUserId]
-    );
-
-    req.session.userId = rows[0].id;
-    req.session.userName = rows[0].rank_name;
-    req.session.userEmail = email;
-    req.session.pendingUserId = null;
-
-    res.redirect(process.env.DASHBOARD_URL || "/dashboard.html");
-  } catch (err) {
-    console.error("Login Error:", err);
-    res.status(500).send("Login Error");
   }
 });
 
@@ -640,11 +603,25 @@ API: MY DUTY (all people on dates that I have duty)
 ========================= */
 app.get("/get-my-duty", async (req, res) => {
   try {
-    if (!req.session.userId) {
-      return res.status(401).json({ error: "Unauthorized" });
+    let userId = req.session.userId;
+    const token = req.query.token;
+
+    if (token) {
+      const [userRows] = await pool.execute(
+        "SELECT id FROM users WHERE dashboard_token=?",
+        [token]
+      );
+
+      if (userRows.length === 0) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      userId = userRows[0].id;
     }
 
-    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
 
     const [rows] = await pool.execute(
       `SELECT s.*, u.rank_name
@@ -669,13 +646,40 @@ app.get("/get-my-duty", async (req, res) => {
 /* =========================
 PROFILE + HEALTH
 ========================= */
-app.get("/api/my-profile", (req, res) => {
-  if (!req.session.userId) return res.status(401).send("Unauthorized");
-  res.json({
-    id: req.session.userId,
-    name: req.session.userName,
-    email: req.session.userEmail,
-  });
+app.get("/api/my-profile", async (req, res) => {
+  try {
+    const token = req.query.token;
+
+    if (token) {
+      const [rows] = await pool.execute(
+        "SELECT id, rank_name, email FROM users WHERE dashboard_token=?",
+        [token]
+      );
+
+      if (rows.length === 0) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      return res.json({
+        id: rows[0].id,
+        name: rows[0].rank_name,
+        email: rows[0].email,
+      });
+    }
+
+    if (!req.session.userId) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    return res.json({
+      id: req.session.userId,
+      name: req.session.userName,
+      email: req.session.userEmail,
+    });
+  } catch (err) {
+    console.error("MY PROFILE ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get("/health", (req, res) => res.send("OK"));
@@ -685,6 +689,18 @@ SAFETY: LOG UNHANDLED
 ========================= */
 process.on("unhandledRejection", (err) => {
   console.error("UNHANDLED REJECTION:", err);
+});
+
+app.get("/debug/user/:id", async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      "SELECT id, rank_name, email, google_token, dashboard_token FROM users WHERE id=?",
+      [req.params.id]
+    );
+    res.json(rows[0] || null);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /* =========================
