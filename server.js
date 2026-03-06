@@ -527,7 +527,7 @@ app.delete("/clear-all-users", async (req, res) => clearAllUsersImpl(res));
 app.get("/clear-all-users", async (req, res) => clearAllUsersImpl(res)); // backward compat
 
 /* =========================
-API: MY DUTY
+API: MY DUTY (all people on dates that I have duty)
 ========================= */
 app.get("/get-my-duty", async (req, res) => {
   try {
@@ -535,13 +535,19 @@ app.get("/get-my-duty", async (req, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
+    const userId = req.session.userId;
+
     const [rows] = await pool.execute(
       `SELECT s.*, u.rank_name
        FROM shift_assignments s
        JOIN users u ON s.user_id = u.id
-       WHERE s.user_id = ?
-       ORDER BY s.shift_date`,
-      [req.session.userId]
+       WHERE s.shift_date IN (
+         SELECT shift_date
+         FROM shift_assignments
+         WHERE user_id = ?
+       )
+       ORDER BY s.shift_date, s.role_type`,
+      [userId]
     );
 
     res.json(rows);
