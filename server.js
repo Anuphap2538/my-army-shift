@@ -3,11 +3,16 @@ import mysql from "mysql2/promise";
 import dotenv from "dotenv";
 import session from "express-session";
 import { google } from "googleapis";
+import crypto from "crypto";
 
 dotenv.config();
 
 const app = express();
 app.set("trust proxy", 1);
+
+function generateDashboardToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
 
 app.use(express.json());
 app.use(express.static("public"));
@@ -138,10 +143,11 @@ app.get("/google/auth", async (req, res) => {
 app.get("/login-redirect", async (req, res) => {
   try {
     const code = req.query.code;
-    if (!code) return res.status(400).send("❌ Invalid Login Request");
+    if (!code) {
+      return res.status(400).send("❌ Invalid Login Request");
+    }
 
     const pendingUserId = req.session.pendingUserId;
-
     if (!pendingUserId) {
       return res.status(400).send("❌ ไม่พบข้อมูลผู้ใช้ที่เลือก");
     }
@@ -149,9 +155,24 @@ app.get("/login-redirect", async (req, res) => {
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
 
-    const oauth2 = google.oauth2({ auth: oauth2Client, version: "v2" });
-    const userInfo = await oauth2.userinfo.get();
+    const oauth2 = google.oauth2({
+      auth: oauth2Client,
+      version: "v2",
+    });
 
+    app.get("/debug/user/:id", async (req, res) => {
+  try {
+    const [rows] = await pool.execute(
+      "SELECT id, rank_name, email, google_token, dashboard_token FROM users WHERE id=?",
+      [req.params.id]
+    );
+    res.json(rows[0] || null);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+    const userInfo = await oauth2.userinfo.get();
     const email = userInfo.data.email;
 
     const dashboardToken = generateDashboardToken();
@@ -177,10 +198,9 @@ app.get("/login-redirect", async (req, res) => {
     req.session.userEmail = email;
     req.session.pendingUserId = null;
 
-    res.redirect("/dashboard.html");
-
+    res.redirect(process.env.DASHBOARD_URL || "/dashboard.html");
   } catch (err) {
-    console.error("Login Error:", err);
+    console.error("LOGIN REDIRECT ERROR:", err);
     res.status(500).send("Login Error");
   }
 });
@@ -249,7 +269,10 @@ API: USERS
 app.get("/get-users", async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      "SELECT id, rank_name, role, email, (google_token IS NOT NULL) AS is_linked FROM users ORDER BY id"
+      `SELECT id, rank_name, role, email,
+      (google_token IS NOT NULL) AS is_linked
+      FROM users
+      ORDER BY id`
     );
     res.json(rows);
   } catch (err) {

@@ -4,21 +4,131 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ลงทะเบียนรับตารางเวร | กองพันทหารอากาศโยธิน</title>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#4f46e5">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4f46e5">
     <style>
-        body { font-family: 'Sarabun', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        .reg-card { background: white; color: #1e293b; padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; }
-        .logo { font-size: 50px; margin-bottom: 10px; }
-        h2 { margin-bottom: 5px; color: #1e3a8a; }
-        p { color: #64748b; font-size: 14px; margin-bottom: 25px; }
-        select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 12px; font-family: inherit; font-size: 16px; margin-bottom: 20px; }
-        .btn-google { background: #ffffff; border: 1px solid #dadce0; color: #3c4043; padding: 12px; border-radius: 12px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; font-weight: 600; text-decoration: none; transition: 0.2s; }
-        .btn-google:hover { background: #f8f9fa; border-color: #d2e3fc; }
-        .google-icon { width: 20px; }
-        .status-msg { margin-top: 15px; font-size: 13px; color: #ef4444; display: none; }
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .reg-card {
+            background: white;
+            color: #1e293b;
+            padding: 30px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .logo {
+            font-size: 50px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 6px;
+            color: #1e3a8a;
+        }
+
+        .desc {
+            text-align: center;
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .search-box {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 16px;
+            margin-bottom: 16px;
+            outline: none;
+        }
+
+        .search-box:focus {
+            border-color: #4f46e5;
+        }
+
+        .user-list {
+            max-height: 380px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 10px;
+            background: #f8fafc;
+        }
+
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+
+        .user-name {
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 15px;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .btn-google {
+            background: #ffffff;
+            border: 1px solid #dadce0;
+            color: #3c4043;
+            padding: 10px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: inherit;
+            white-space: nowrap;
+            transition: 0.2s;
+        }
+
+        .btn-google:hover {
+            background: #f8f9fa;
+            border-color: #d2e3fc;
+        }
+
+        .empty {
+            text-align: center;
+            color: #94a3b8;
+            padding: 20px;
+            font-size: 14px;
+        }
+
+        .note {
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
@@ -26,50 +136,122 @@
 <div class="reg-card">
     <div class="logo">🎖️</div>
     <h2>ลงทะเบียนครั้งแรก</h2>
-    <p>เลือกชื่อของท่านเพื่อเชื่อมต่อตารางเวรเข้ากับ Google Calendar</p>
+    <p class="desc">ค้นหาชื่อของท่าน แล้วกดเชื่อม Google Calendar</p>
 
-    <select id="userSelect">
-        <option value="">-- กำลังโหลดรายชื่อ --</option>
-    </select>
+    <input
+        id="searchInput"
+        class="search-box"
+        type="text"
+        placeholder="พิมพ์ค้นหาชื่อหรือยศ..."
+        oninput="renderUsers()"
+    >
 
-    <a href="#" id="authLink" class="btn-google" onclick="checkSelection(event)">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_Color_Icon.svg" class="google-icon">
-        เชื่อมต่อด้วย Google
-    </a>
+    <div id="userList" class="user-list">
+        <div class="empty">กำลังโหลดรายชื่อ...</div>
+    </div>
 
-    <div id="errorMsg" class="status-msg">⚠️ กรุณาเลือกชื่อของท่านก่อนกดเชื่อมต่อ</div>
+    <div class="note">
+        แสดงเฉพาะรายชื่อที่ยังไม่ได้ลงทะเบียน
+    </div>
 </div>
 
 <script>
-    // 1. โหลดรายชื่อจาก Database มาให้เลือก
-    async function fetchUsers() {
-        const res = await fetch('/get-users');
-        const users = await res.json();
-        const select = document.getElementById('userSelect');
-        select.innerHTML = '<option value="">-- ค้นหาชื่อ-นามสกุล --</option>';
-        
-        users.forEach(u => {
-            // โชว์เฉพาะคนที่ยังไม่มี Token (ยังไม่ได้ลงทะเบียน)
-            if (!u.google_token) {
-                select.innerHTML += `<option value="${u.id}">${u.rank_name}</option>`;
-            }
-        });
+    let allUsers = [];
+
+    function normalizeText(text) {
+        return String(text || "")
+            .replace(/\s+/g, " ")
+            .trim()
+            .toLowerCase();
     }
 
-    // 2. ตรวจสอบก่อนส่งไปหน้า Google Auth
-    function checkSelection(e) {
-        const userId = document.getElementById('userSelect').value;
-        if (!userId) {
-            e.preventDefault();
-            document.getElementById('errorMsg').style.display = 'block';
-        } else {
-            // ส่ง userId ไปที่ API /google/auth ของเรา
-            window.location.href = `/google/auth?user_id=${userId}`;
+    function normalizeRankText(s) {
+        return String(s || "")
+            .replace(/\s+/g, " ")
+            .replace(/．/g, ".")
+            .trim();
+    }
+
+    function getRankWeightFromName(fullName) {
+        const name = normalizeRankText(fullName);
+
+        if (name.startsWith("น.ต.")) return 1;
+        if (name.startsWith("ร.อ.")) return 2;
+        if (name.startsWith("ร.ท.")) return 3;
+        if (name.startsWith("ร.ต.")) return 4;
+
+        if (name.startsWith("พ.อ.อ.")) return 5;
+        if (name.startsWith("พ.อ.ท.")) return 6;
+        if (name.startsWith("พ.อ.ต.")) return 7;
+        if (name.startsWith("จ.อ.")) return 8;
+        if (name.startsWith("จ.ท.")) return 9;
+        if (name.startsWith("จ.ต.")) return 10;
+
+        return 9999;
+    }
+
+    async function fetchUsers() {
+        const userList = document.getElementById("userList");
+        userList.innerHTML = `<div class="empty">กำลังโหลดรายชื่อ...</div>`;
+
+        try {
+            const res = await fetch("/get-users");
+            const users = await res.json();
+
+            allUsers = users
+                .filter(u => !u.is_linked)
+                .sort((a, b) => {
+                    const wa = getRankWeightFromName(a.rank_name);
+                    const wb = getRankWeightFromName(b.rank_name);
+
+                    if (wa !== wb) return wa - wb;
+                    return String(a.rank_name || "").localeCompare(String(b.rank_name || ""), "th");
+                });
+
+            renderUsers();
+        } catch (err) {
+            console.error("FETCH USERS ERROR:", err);
+            userList.innerHTML = `<div class="empty">โหลดรายชื่อไม่สำเร็จ</div>`;
         }
     }
 
-    fetchUsers();
+    function renderUsers() {
+        const keyword = normalizeText(document.getElementById("searchInput").value);
+        const userList = document.getElementById("userList");
 
+        let filtered = allUsers;
+
+        if (keyword) {
+            filtered = allUsers.filter(u => {
+                const name = normalizeText(u.rank_name);
+                const role = normalizeText(u.role);
+                return name.includes(keyword) || role.includes(keyword);
+            });
+        }
+
+        if (filtered.length === 0) {
+            userList.innerHTML = `<div class="empty">ไม่พบรายชื่อที่ค้นหา</div>`;
+            return;
+        }
+
+        userList.innerHTML = filtered.map(u => `
+            <div class="user-item">
+                <div>
+                    <div class="user-name">${u.rank_name}</div>
+                    <div class="user-role">${u.role || "-"}</div>
+                </div>
+                <button class="btn-google" onclick="startRegister(${u.id})">
+                    เชื่อม Google
+                </button>
+            </div>
+        `).join("");
+    }
+
+    function startRegister(userId) {
+        window.location.href = `/google/auth?user_id=${userId}`;
+    }
+
+    fetchUsers();
 </script>
 
 </body>
