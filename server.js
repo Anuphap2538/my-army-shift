@@ -319,16 +319,6 @@ async function getColonelUser() {
   return rows[0];
 }
 
-  if (rows.length === 0) {
-    throw new Error("ยังไม่ได้ตั้งผู้พันในระบบ");
-  }
-
-  if (!rows[0].google_token) {
-    throw new Error("ผู้พันยังไม่ได้เชื่อม Google");
-  }
-
-  return rows[0];
-}
 
 async function sendToGoogleCalendar(auth, shift, allShifts) {
   const calendar = google.calendar({ version: "v3", auth });
@@ -838,10 +828,11 @@ app.post("/sync-existing-shifts", async (req, res) => {
 
 app.post("/sync-colonel-daily", async (req, res) => {
   try {
-    const { date } = pickBodyOrQuery(req);
     const dateStr = date
-      ? String(date).slice(0, 10)
-      : new Date().toISOString().split("T")[0];
+  ? String(date).slice(0, 10)
+  : new Date().toLocaleDateString("en-CA", {
+      timeZone: "Asia/Bangkok",
+    });
 
     const [rows] = await pool.execute(
       `SELECT s.*, u.rank_name, u.email
@@ -1010,19 +1001,6 @@ app.get("/api/my-profile", async (req, res) => {
   }
 });
 
-app.get("/admin/check", (req, res) => {
-  if (req.session && req.session.isAdmin) {
-    return res.json({ ok: true });
-  }
-  return res.status(401).json({ ok: false });
-});
-
-app.post("/admin/logout", (req, res) => {
-  req.session.destroy(() => {
-    res.json({ success: true });
-  });
-});
-
 app.get("/health", (req, res) => res.send("OK"));
 
 /* =========================
@@ -1046,7 +1024,9 @@ app.get("/debug/user/:id", async (req, res) => {
 
 cron.schedule("0 6 * * *", async () => {
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toLocaleDateString("en-CA", {
+  timeZone: "Asia/Bangkok",
+});
 
     const [rows] = await pool.execute(
       `SELECT s.*, u.rank_name, u.email
