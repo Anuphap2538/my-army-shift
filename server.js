@@ -452,6 +452,9 @@ else {
 
 async function sendSummaryToColonelCalendar(targetDate, allShifts) {
   const colonel = await getColonelUser();
+  const dashboardUrl = colonel.dashboard_token
+  ? buildDashboardUrl(colonel.dashboard_token)
+  : "";
   const auth = buildAuthFromToken(colonel.google_token);
   const calendar = google.calendar({ version: "v3", auth });
   const calendarId = "primary";
@@ -478,11 +481,12 @@ async function sendSummaryToColonelCalendar(targetDate, allShifts) {
   const summary = `📋 สรุปเวรประจำวัน (${dateOnly})`;
 
   const description =
-    `[ARMY_SHIFT_COLONEL]\n` +
-    `กองพัน: ${kpShifts.length} นาย\n` +
-    `นายทหารเวรกองพัน: ${kpSupervisor ? kpSupervisor.rank_name : "ยังไม่ระบุ"}\n\n` +
-    `ศปก.: ${spkShifts.length} นาย\n` +
-    `นายทหารเวร ศปก.: ${spkSupervisor ? spkSupervisor.rank_name : "ยังไม่ระบุ"}`;
+  `[ARMY_SHIFT_COLONEL]\n` +
+  `กองพัน: ${kpShifts.length} นาย\n` +
+  `นายทหารเวรกองพัน: ${kpSupervisor ? kpSupervisor.rank_name : "ยังไม่ระบุ"}\n\n` +
+  `ศปก.: ${spkShifts.length} นาย\n` +
+  `นายทหารเวร ศปก.: ${spkSupervisor ? spkSupervisor.rank_name : "ยังไม่ระบุ"}` +
+  (dashboardUrl ? `\n\n📱 Dashboard ผู้พัน:\n${dashboardUrl}` : "");
 
   const event = {
     summary,
@@ -883,11 +887,12 @@ API: MY DUTY (all people on dates that I have duty)
 app.get("/get-my-duty", async (req, res) => {
   try {
     let userId = req.session.userId;
+    let isColonel = false;
     const token = req.query.token;
 
     if (token) {
       const [userRows] = await pool.execute(
-        "SELECT id FROM users WHERE dashboard_token=?",
+        "SELECT id, is_colonel FROM users WHERE dashboard_token=?",
         [token]
       );
 
@@ -896,12 +901,42 @@ app.get("/get-my-duty", async (req, res) => {
       }
 
       userId = userRows[0].id;
+      isColonel = Number(userRows[0].is_colonel || 0) === 1;
+    } else if (userId) {
+      const [me] = await pool.execute(
+        "SELECT is_colonel FROM users WHERE id=?",
+        [userId]
+      );
+      if (me.length > 0) {
+        isColonel = Number(me[0].is_colonel || 0) === 1;
+      }
     }
 
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
+    // ===== ผู้พัน: ดูเฉพาะวันรายงาน และเฉพาะ 2 กลุ่ม =====
+    if (isColonel) {
+      const [rows] = await pool.execute(
+        `SELECT s.*, u.rank_name
+         FROM shift_assignments s
+         JOIN users u ON s.user_id = u.id
+         WHERE DATE(s.shift_date) IN (
+           SELECT DISTINCT DATE(shift_date)
+           FROM shift_assignments
+         )
+         AND TRIM(s.group_name) IN ('กองพัน', 'ศปก', 'ศปก.')
+         ORDER BY s.shift_date, s.group_name, s.role_type`
+      );
+
+      return res.json({
+        mode: "colonel",
+        rows
+      });
+    }
+
+    // ===== คนทั่วไป: ใช้ logic เดิม =====
     const [rows] = await pool.execute(
       `SELECT s.*, u.rank_name
        FROM shift_assignments s
@@ -915,7 +950,10 @@ app.get("/get-my-duty", async (req, res) => {
       [userId]
     );
 
-    res.json(rows);
+    return res.json({
+      mode: "user",
+      rows
+    });
   } catch (err) {
     console.error("GET MY DUTY ERROR:", err);
     res.status(500).json({ error: err.message });

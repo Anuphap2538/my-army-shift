@@ -162,23 +162,31 @@
                 : `/get-my-duty`;
 
             const sRes = await fetch(dutyUrl);
-            if (!sRes.ok) throw new Error("โหลดเวรไม่สำเร็จ");
+if (!sRes.ok) throw new Error("โหลดเวรไม่สำเร็จ");
 
-            const myShifts = await sRes.json();
+const payload = await sRes.json();
+const myShifts = Array.isArray(payload) ? payload : (payload.rows || []);
+const dashboardMode = payload.mode || "user";
 
-            scheduleData = {};
-            if (Array.isArray(myShifts)) {
-                myShifts.forEach(s => {
-                    const dateStr = String(s.shift_date).split('T')[0];
-                    if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
+scheduleData = {};
+if (Array.isArray(myShifts)) {
+    myShifts.forEach(s => {
+        const dateStr = String(s.shift_date).split('T')[0];
+        if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
 
-                    scheduleData[dateStr].push({
-                        name: s.rank_name || "เจ้าหน้าที่",
-                        role: s.role_type || "",
-                        turn: parseInt(s.shift_turn || 1)
-                    });
-                });
-            }
+        scheduleData[dateStr].push({
+            name: s.rank_name || "เจ้าหน้าที่",
+            role: s.role_type || "",
+            turn: parseInt(s.shift_turn || 1),
+            group: s.group_name || ""
+        });
+    });
+}
+
+if (dashboardMode === "colonel") {
+    document.getElementById('userNameDisplay').innerText =
+        (currentUserName || "ผู้พัน") + " (รายงาน 2 กลุ่มเวร)";
+}
 
             renderCalendar();
         } catch (e) {
@@ -216,15 +224,16 @@
             cell.innerHTML = `<span class="${colorClass}">${i}</span>${holidayName ? `<span class="holiday-name">${holidayName}</span>` : ''}`;
 
             const duties = scheduleData[dateStr] || [];
+            const isColonelView = document.getElementById('userNameDisplay').innerText.includes('รายงาน 2 กลุ่มเวร');
             const isMe = duties.some(d => sameName(d.name, currentUserName));
 
-            if (isMe) {
-                cell.classList.add('duty-active');
-            } else if (duties.length > 0) {
-                const dot = document.createElement('div');
-                dot.className = 'duty-dot';
-                cell.appendChild(dot);
-            }
+if ((isColonelView && duties.length > 0) || isMe) {
+    cell.classList.add('duty-active');
+} else if (duties.length > 0) {
+    const dot = document.createElement('div');
+    dot.className = 'duty-dot';
+    cell.appendChild(dot);
+}
 
             cell.onclick = () => showInfo(i, dateStr, holidayName, duties);
             grid.appendChild(cell);
@@ -236,7 +245,9 @@
         const list = document.getElementById('partnerList');
 
         const myDuties = duties.filter(d => sameName(d.name, currentUserName));
-        if (myDuties.length === 0) return;
+const isColonelView = document.getElementById('userNameDisplay').innerText.includes('รายงาน 2 กลุ่มเวร');
+
+if (myDuties.length === 0 && !isColonelView) return;
 
         modal.style.display = 'flex';
         document.getElementById('displayDate').innerText =
@@ -270,8 +281,10 @@
         );
 
         let showKP = true, showSPK = true;
-        if (amIKongPan && !amISPK) showSPK = false;
-        if (amISPK && !amIKongPan) showKP = false;
+    if (!isColonelView) {
+    if (amIKongPan && !amISPK) showSPK = false;
+    if (amISPK && !amIKongPan) showKP = false;
+}
 
         let gridStyle = (showKP && showSPK) ? "grid-template-columns: 1fr 1fr;" : "grid-template-columns: 1fr;";
         let html = `<div style="display: grid; ${gridStyle} gap: 20px;">`;
