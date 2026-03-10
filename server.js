@@ -302,11 +302,22 @@ function buildAuthFromToken(tokenJson) {
 
 async function getColonelUser() {
   const [rows] = await pool.execute(
-    `SELECT id, rank_name, email, google_token
+    `SELECT id, rank_name, email, google_token, dashboard_token
      FROM users
      WHERE is_colonel = 1
      LIMIT 1`
   );
+
+  if (rows.length === 0) {
+    throw new Error("ยังไม่ได้ตั้งผู้พันในระบบ");
+  }
+
+  if (!rows[0].google_token) {
+    throw new Error("ผู้พันยังไม่ได้เชื่อม Google");
+  }
+
+  return rows[0];
+}
 
   if (rows.length === 0) {
     throw new Error("ยังไม่ได้ตั้งผู้พันในระบบ");
@@ -452,12 +463,12 @@ else {
 
 async function sendSummaryToColonelCalendar(targetDate, allShifts) {
   const colonel = await getColonelUser();
-  const dashboardUrl = colonel.dashboard_token
-  ? buildDashboardUrl(colonel.dashboard_token)
-  : "";
   const auth = buildAuthFromToken(colonel.google_token);
   const calendar = google.calendar({ version: "v3", auth });
   const calendarId = "primary";
+  const dashboardUrl = colonel.dashboard_token
+  ? buildDashboardUrl(colonel.dashboard_token)
+  : "";
 
   const dateOnly =
     typeof targetDate === "string"
