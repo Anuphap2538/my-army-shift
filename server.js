@@ -251,20 +251,23 @@ function buildAuthFromToken(tokenJson) {
   return auth;
 }
 
-function buildColonelAuth() {
-  const auth = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    REDIRECT_URI
+async function getColonelUser() {
+  const [rows] = await pool.execute(
+    `SELECT id, rank_name, email, google_token
+     FROM users
+     WHERE is_colonel = 1
+     LIMIT 1`
   );
 
-  const tokenJson = process.env.COLONEL_GOOGLE_TOKEN;
-  if (!tokenJson) {
-    throw new Error("COLONEL_GOOGLE_TOKEN not set");
+  if (rows.length === 0) {
+    throw new Error("ยังไม่ได้ตั้งผู้พันในระบบ");
   }
 
-  auth.setCredentials(JSON.parse(tokenJson));
-  return auth;
+  if (!rows[0].google_token) {
+    throw new Error("ผู้พันยังไม่ได้เชื่อม Google");
+  }
+
+  return rows[0];
 }
 
 async function sendToGoogleCalendar(auth, shift, allShifts) {
@@ -399,9 +402,10 @@ else {
 }
 
 async function sendSummaryToColonelCalendar(targetDate, allShifts) {
-  const auth = buildColonelAuth();
+  const colonel = await getColonelUser();
+  const auth = buildAuthFromToken(colonel.google_token);
   const calendar = google.calendar({ version: "v3", auth });
-  const calendarId = process.env.COLONEL_CALENDAR_ID || "primary";
+  const calendarId = "primary";
 
   const dateOnly =
     typeof targetDate === "string"
@@ -906,6 +910,34 @@ app.get("/api/my-profile", async (req, res) => {
     console.error("MY PROFILE ERROR:", err);
     res.status(500).json({ error: err.message });
   }
+});
+
+app.post("/admin/login", (req, res) => {
+  const { username, password } = req.body || {};
+
+  if (
+    username === process.env.ADMIN_USERNAME &&
+    password === process.env.ADMIN_PASSWORD
+  ) {
+    req.session.isAdmin = true;
+    req.session.adminUsername = username;
+    return res.json({ success: true });
+  }
+
+  return res.status(401).json({ error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" });
+});
+
+app.get("/admin/check", (req, res) => {
+  if (req.session && req.session.isAdmin) {
+    return res.json({ ok: true });
+  }
+  return res.status(401).json({ ok: false });
+});
+
+app.post("/admin/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.json({ success: true });
+  });
 });
 
 app.get("/health", (req, res) => res.send("OK"));
