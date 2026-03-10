@@ -80,6 +80,55 @@ function requireAdmin(req, res, next) {
   return res.status(401).json({ error: "Unauthorized" });
 }
 
+app.post("/admin/login", (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+
+    const adminUser = process.env.ADMIN_USERNAME;
+    const adminPass = process.env.ADMIN_PASSWORD;
+
+    if (!adminUser || !adminPass) {
+      return res.status(500).json({ error: "Admin env not set" });
+    }
+
+    if (username === adminUser && password === adminPass) {
+      req.session.isAdmin = true;
+      req.session.adminUsername = username;
+
+      return req.session.save((err) => {
+        if (err) {
+          console.error("ADMIN SESSION SAVE ERROR:", err);
+          return res.status(500).json({ error: "Session save failed" });
+        }
+        return res.json({ success: true });
+      });
+    }
+
+    return res.status(401).json({ error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" });
+  } catch (err) {
+    console.error("ADMIN LOGIN ERROR:", err);
+    return res.status(500).json({ error: "Login error" });
+  }
+});
+
+app.get("/admin/check", (req, res) => {
+  if (req.session && req.session.isAdmin) {
+    return res.json({ ok: true, username: req.session.adminUsername || null });
+  }
+  return res.status(401).json({ error: "Unauthorized" });
+});
+
+app.post("/admin/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("ADMIN LOGOUT ERROR:", err);
+      return res.status(500).json({ error: "Logout failed" });
+    }
+    res.clearCookie("connect.sid");
+    return res.json({ success: true });
+  });
+});
+
 /* =========================
 TEST DATABASE
 ========================= */
@@ -910,21 +959,6 @@ app.get("/api/my-profile", async (req, res) => {
     console.error("MY PROFILE ERROR:", err);
     res.status(500).json({ error: err.message });
   }
-});
-
-app.post("/admin/login", (req, res) => {
-  const { username, password } = req.body || {};
-
-  if (
-    username === process.env.ADMIN_USERNAME &&
-    password === process.env.ADMIN_PASSWORD
-  ) {
-    req.session.isAdmin = true;
-    req.session.adminUsername = username;
-    return res.json({ success: true });
-  }
-
-  return res.status(401).json({ error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" });
 });
 
 app.get("/admin/check", (req, res) => {
