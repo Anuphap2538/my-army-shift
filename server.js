@@ -829,12 +829,12 @@ app.post("/sync-existing-shifts", async (req, res) => {
 app.post("/sync-colonel-daily", async (req, res) => {
   try {
     const { date } = pickBodyOrQuery(req);
-    
+
     const dateStr = date
-  ? String(date).slice(0, 10)
-  : new Date().toLocaleDateString("en-CA", {
-      timeZone: "Asia/Bangkok",
-    });
+      ? String(date).slice(0, 10)
+      : new Date().toLocaleDateString("en-CA", {
+          timeZone: "Asia/Bangkok",
+        });
 
     const [rows] = await pool.execute(
       `SELECT s.*, u.rank_name, u.email
@@ -845,6 +845,14 @@ app.post("/sync-colonel-daily", async (req, res) => {
     );
 
     await sendSummaryToColonelCalendar(dateStr, rows);
+
+    // ✅ บันทึกว่าวันนี้แจ้งเตือนผู้พันแล้ว
+    await pool.execute(
+      `INSERT INTO colonel_notifications (notify_date)
+       VALUES (?)
+       ON DUPLICATE KEY UPDATE notify_date = VALUES(notify_date)`,
+      [dateStr]
+    );
 
     res.json({
       success: true,
@@ -922,23 +930,23 @@ app.get("/get-my-duty", async (req, res) => {
 
     // ===== ผู้พัน: ดูเฉพาะวันรายงาน และเฉพาะ 2 กลุ่ม =====
     if (isColonel) {
-      const [rows] = await pool.execute(
-        `SELECT s.*, u.rank_name
-         FROM shift_assignments s
-         JOIN users u ON s.user_id = u.id
-         WHERE DATE(s.shift_date) IN (
-           SELECT DISTINCT DATE(shift_date)
-           FROM shift_assignments
-         )
-         AND TRIM(s.group_name) IN ('กองพัน', 'ศปก', 'ศปก.')
-         ORDER BY s.shift_date, s.group_name, s.role_type`
-      );
+  const [rows] = await pool.execute(
+    `SELECT s.*, u.rank_name
+     FROM shift_assignments s
+     JOIN users u ON s.user_id = u.id
+     WHERE DATE(s.shift_date) IN (
+       SELECT notify_date
+       FROM colonel_notifications
+     )
+     AND TRIM(s.group_name) IN ('กองพัน', 'ศปก', 'ศปก.')
+     ORDER BY s.shift_date, s.group_name, s.role_type`
+  );
 
-      return res.json({
-        mode: "colonel",
-        rows
-      });
-    }
+  return res.json({
+    mode: "colonel",
+    rows
+  });
+}
 
     // ===== คนทั่วไป: ใช้ logic เดิม =====
     const [rows] = await pool.execute(
@@ -1027,8 +1035,8 @@ app.get("/debug/user/:id", async (req, res) => {
 cron.schedule("0 6 * * *", async () => {
   try {
     const today = new Date().toLocaleDateString("en-CA", {
-  timeZone: "Asia/Bangkok",
-});
+      timeZone: "Asia/Bangkok",
+    });
 
     const [rows] = await pool.execute(
       `SELECT s.*, u.rank_name, u.email
@@ -1039,6 +1047,14 @@ cron.schedule("0 6 * * *", async () => {
     );
 
     await sendSummaryToColonelCalendar(today, rows);
+
+    await pool.execute(
+      `INSERT INTO colonel_notifications (notify_date)
+       VALUES (?)
+       ON DUPLICATE KEY UPDATE notify_date = VALUES(notify_date)`,
+      [today]
+    );
+
     console.log("✅ Colonel daily sync success:", today);
   } catch (err) {
     console.error("❌ Colonel cron sync error:", err.message);
