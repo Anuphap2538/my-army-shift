@@ -828,6 +828,8 @@ app.post("/sync-existing-shifts", async (req, res) => {
 
 app.post("/sync-colonel-daily", async (req, res) => {
   try {
+    const { date } = pickBodyOrQuery(req);
+    
     const dateStr = date
   ? String(date).slice(0, 10)
   : new Date().toLocaleDateString("en-CA", {
