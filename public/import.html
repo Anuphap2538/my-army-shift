@@ -116,5 +116,19 @@
         }
     }
 </script>
+
+<script>
+(async function checkAdmin() {
+  try {
+    const res = await fetch("/admin/check", { cache: "no-store" });
+    if (!res.ok) {
+      window.location.href = "/admin-login.html";
+    }
+  } catch (e) {
+    window.location.href = "/admin-login.html";
+  }
+})();
+</script>
+
 </body>
 </html>

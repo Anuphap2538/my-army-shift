@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import session from "express-session";
 import { google } from "googleapis";
 import crypto from "crypto";
+import cron from "node-cron";
 
 dotenv.config();
 
@@ -71,6 +72,13 @@ const pickBodyOrQuery = (req) => ({
   ...req.query,
   ...(req.body && typeof req.body === "object" ? req.body : {}),
 });
+
+function requireAdmin(req, res, next) {
+  if (req.session && req.session.isAdmin) {
+    return next();
+  }
+  return res.status(401).json({ error: "Unauthorized" });
+}
 
 /* =========================
 TEST DATABASE
@@ -243,6 +251,22 @@ function buildAuthFromToken(tokenJson) {
   return auth;
 }
 
+function buildColonelAuth() {
+  const auth = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    REDIRECT_URI
+  );
+
+  const tokenJson = process.env.COLONEL_GOOGLE_TOKEN;
+  if (!tokenJson) {
+    throw new Error("COLONEL_GOOGLE_TOKEN not set");
+  }
+
+  auth.setCredentials(JSON.parse(tokenJson));
+  return auth;
+}
+
 async function sendToGoogleCalendar(auth, shift, allShifts) {
   const calendar = google.calendar({ version: "v3", auth });
 
@@ -370,6 +394,80 @@ else {
   // ➕ สร้าง event ใหม่
   return calendar.events.insert({
     calendarId: "primary",
+    resource: event,
+  });
+}
+
+async function sendSummaryToColonelCalendar(targetDate, allShifts) {
+  const auth = buildColonelAuth();
+  const calendar = google.calendar({ version: "v3", auth });
+  const calendarId = process.env.COLONEL_CALENDAR_ID || "primary";
+
+  const dateOnly =
+    typeof targetDate === "string"
+      ? targetDate.slice(0, 10)
+      : new Date(targetDate).toISOString().split("T")[0];
+
+  const kpShifts = allShifts.filter(
+    (s) => normalizeGroup(s.group_name) === "กองพัน"
+  );
+  const spkShifts = allShifts.filter(
+    (s) => normalizeGroup(s.group_name) === "ศปก"
+  );
+
+  const kpSupervisor = kpShifts.find((s) =>
+    String(s.role_type || "").includes("นายทหารเวร")
+  );
+  const spkSupervisor = spkShifts.find((s) =>
+    String(s.role_type || "").includes("นายทหารเวร")
+  );
+
+  const summary = `📋 สรุปเวรประจำวัน (${dateOnly})`;
+
+  const description =
+    `[ARMY_SHIFT_COLONEL]\n` +
+    `กองพัน: ${kpShifts.length} นาย\n` +
+    `นายทหารเวรกองพัน: ${kpSupervisor ? kpSupervisor.rank_name : "ยังไม่ระบุ"}\n\n` +
+    `ศปก.: ${spkShifts.length} นาย\n` +
+    `นายทหารเวร ศปก.: ${spkSupervisor ? spkSupervisor.rank_name : "ยังไม่ระบุ"}`;
+
+  const event = {
+    summary,
+    description,
+    start: { dateTime: `${dateOnly}T07:00:00`, timeZone: "Asia/Bangkok" },
+    end: { dateTime: `${dateOnly}T07:30:00`, timeZone: "Asia/Bangkok" },
+    reminders: {
+      useDefault: false,
+      overrides: [{ method: "popup", minutes: 0 }],
+    },
+  };
+
+  // ลบ event สรุปเดิมของวันนั้นก่อน กันซ้ำ
+  const existing = await calendar.events.list({
+    calendarId,
+    timeMin: `${dateOnly}T00:00:00+07:00`,
+    timeMax: `${dateOnly}T23:59:59+07:00`,
+    q: "ARMY_SHIFT_COLONEL",
+  });
+
+  if (existing.data.items && existing.data.items.length > 0) {
+    for (const ev of existing.data.items) {
+      const evDesc = ev.description || "";
+      if (evDesc.includes("[ARMY_SHIFT_COLONEL]")) {
+        try {
+          await calendar.events.delete({
+            calendarId,
+            eventId: ev.id,
+          });
+        } catch (err) {
+          console.log("Delete old colonel event error:", err.message);
+        }
+      }
+    }
+  }
+
+  return calendar.events.insert({
+    calendarId,
     resource: event,
   });
 }
@@ -670,6 +768,33 @@ app.post("/sync-existing-shifts", async (req, res) => {
   }
 });
 
+app.post("/sync-colonel-daily", async (req, res) => {
+  try {
+    const { date } = pickBodyOrQuery(req);
+    const dateStr = date
+      ? String(date).slice(0, 10)
+      : new Date().toISOString().split("T")[0];
+
+    const [rows] = await pool.execute(
+      `SELECT s.*, u.rank_name, u.email
+       FROM shift_assignments s
+       JOIN users u ON s.user_id = u.id
+       WHERE DATE(s.shift_date)=?`,
+      [dateStr]
+    );
+
+    await sendSummaryToColonelCalendar(dateStr, rows);
+
+    res.json({
+      success: true,
+      message: `ซิงค์แจ้งเตือนผู้พันวันที่ ${dateStr} สำเร็จ`,
+    });
+  } catch (err) {
+    console.error("SYNC COLONEL ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* =========================
 SYSTEM: CLEAR
 - รองรับทั้ง DELETE และ GET เพื่อกันหน้าเก่าเรียกผิด method
@@ -802,6 +927,27 @@ app.get("/debug/user/:id", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+cron.schedule("0 6 * * *", async () => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+
+    const [rows] = await pool.execute(
+      `SELECT s.*, u.rank_name, u.email
+       FROM shift_assignments s
+       JOIN users u ON s.user_id = u.id
+       WHERE DATE(s.shift_date)=?`,
+      [today]
+    );
+
+    await sendSummaryToColonelCalendar(today, rows);
+    console.log("✅ Colonel daily sync success:", today);
+  } catch (err) {
+    console.error("❌ Colonel cron sync error:", err.message);
+  }
+}, {
+  timezone: "Asia/Bangkok"
 });
 
 /* =========================

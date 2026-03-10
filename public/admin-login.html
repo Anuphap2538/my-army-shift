@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>เข้าสู่ระบบแอดมิน</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body{
+      margin:0;
+      font-family:'Sarabun',sans-serif;
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      background:#0f172a;
+      color:#fff;
+      padding:20px;
+    }
+    .card{
+      width:100%;
+      max-width:400px;
+      background:#fff;
+      color:#1e293b;
+      border-radius:20px;
+      padding:30px;
+      box-shadow:0 15px 30px rgba(0,0,0,.25);
+    }
+    h2{
+      margin:0 0 8px 0;
+      color:#1e3a8a;
+      text-align:center;
+    }
+    p{
+      margin:0 0 20px 0;
+      text-align:center;
+      color:#64748b;
+      font-size:14px;
+    }
+    input{
+      width:100%;
+      box-sizing:border-box;
+      padding:12px 14px;
+      margin-bottom:14px;
+      border:1px solid #cbd5e1;
+      border-radius:12px;
+      font-family:inherit;
+      font-size:16px;
+    }
+    button{
+      width:100%;
+      padding:12px;
+      border:none;
+      border-radius:12px;
+      background:#1d4ed8;
+      color:#fff;
+      font-size:16px;
+      font-family:inherit;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .err{
+      color:#dc2626;
+      font-size:14px;
+      margin-top:12px;
+      text-align:center;
+      display:none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>เข้าสู่ระบบแอดมิน</h2>
+    <p>สำหรับผู้ดูแลระบบจัดการตารางเวร</p>
+
+    <input id="username" type="text" placeholder="ชื่อผู้ใช้" />
+    <input id="password" type="password" placeholder="รหัสผ่าน" />
+    <button onclick="adminLogin()">เข้าสู่ระบบ</button>
+
+    <div id="err" class="err">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</div>
+  </div>
+
+  <script>
+    async function adminLogin() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const err = document.getElementById("err");
+
+      err.style.display = "none";
+
+      try {
+        const res = await fetch("/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+
+        if (res.ok) {
+          window.location.href = "/index.html";
+        } else {
+          err.style.display = "block";
+        }
+      } catch (e) {
+        err.innerText = "เกิดข้อผิดพลาดในการเชื่อมต่อ";
+        err.style.display = "block";
+      }
+    }
+  </script>
+</body>
+</html>

@@ -238,6 +238,11 @@ color:#ddd;
             <a href="import.html" class="nav-item"><i class="fas fa-plus-square"></i>อัพโหลดข้อมูล Excel</a>
             <a href="manage.html" class="nav-item"><i class="fas fa-tasks"></i> จัดการ/แก้ไขเวร (Manage)</a>
             <a href="report.html" class="nav-item"><i class="fas fa-file-contract"></i> สรุปรายงาน (Report)</a>
+        
+            <button onclick="adminLogout()" class="nav-item" style="background:none;border:none;width:100%;cursor:pointer;text-align:left;">
+              <i class="fas fa-right-from-bracket"></i> ออกจากระบบ
+            </button>
+
         </div>
 
         <div class="sidebar-credit">
@@ -246,7 +251,7 @@ color:#ddd;
   <div class="credit-name">นายอนุภาพ ทองเชื้อ</div>
 
   <div class="credit-title" style="margin-top:12px;">อาจารย์ที่ปรึกษา</div>
-  <div class="credit-name">อ.พิชญา สุขปลั่ง</div>
+  <div class="credit-name">อ.พิชยา สุขปลั่ง</div>
 </div>
 
     </nav>
@@ -288,6 +293,31 @@ color:#ddd;
             </a>
         </div>
     </div>
+
+    <script>
+(async function checkAdmin() {
+  try {
+    const res = await fetch("/admin/check", { cache: "no-store" });
+    if (!res.ok) {
+      window.location.href = "/admin-login.html";
+    }
+  } catch (e) {
+    window.location.href = "/admin-login.html";
+  }
+})();
+</script>
+
+<script>
+async function adminLogout() {
+  try {
+    await fetch("/admin/logout", { method: "POST" });
+  } catch (e) {
+    console.error(e);
+  }
+
+  window.location.href = "/admin-login.html";
+}
+</script>
 
 </body>
 </html>

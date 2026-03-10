@@ -317,6 +317,10 @@
         <button id="syncBtn" class="btn-nav btn-sync-google" onclick="syncAllToGoogle()">
           <i class="fab fa-google"></i> Sync
         </button>
+
+        <button id="syncColonelBtn" class="btn-nav btn-sync-google" onclick="syncColonelDaily()">
+          <i class="fas fa-bell"></i> แจ้งเตือนผู้พัน
+        </button>
       </div>
     </div>
   </div>
@@ -662,6 +666,45 @@ function getRankWeightFromName(fullName) {
       }
     }
 
+
+async function syncColonelDaily() {
+  const btn = document.getElementById("syncColonelBtn");
+  const month = Number(document.getElementById("monthSelect").value);
+  const today = new Date();
+  const year = 2026;
+  const dd = String(today.getDate()).padStart(2, "0");
+  const mm = String(month).padStart(2, "0");
+  const date = `${year}-${mm}-${dd}`;
+
+  if (!confirm(`ต้องการซิงค์แจ้งเตือนผู้พันสำหรับวันที่ ${date} หรือไม่?`)) return;
+
+  btn.disabled = true;
+  const old = btn.innerHTML;
+  btn.innerHTML = "⏳ กำลังซิงค์...";
+
+  try {
+    const res = await fetch("/sync-colonel-daily", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert(`✅ ${data.message}`);
+    } else {
+      alert(`❌ ${data.error || "sync ไม่สำเร็จ"}`);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("❌ Server Error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = old;
+  }
+}
+
+
     async function syncModalDay(){
       if (!currentModalDate){
         alert("❌ ไม่พบวันที่สำหรับซิงค์");
@@ -699,5 +742,19 @@ function getRankWeightFromName(fullName) {
     setActiveGroupButton("กองพัน");
     renderReport("กองพัน");
   </script>
+
+  <script>
+(async function checkAdmin() {
+  try {
+    const res = await fetch("/admin/check", { cache: "no-store" });
+    if (!res.ok) {
+      window.location.href = "/admin-login.html";
+    }
+  } catch (e) {
+    window.location.href = "/admin-login.html";
+  }
+})();
+</script>
+
 </body>
 </html>
