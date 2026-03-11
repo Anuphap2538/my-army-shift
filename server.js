@@ -4,7 +4,6 @@ import dotenv from "dotenv";
 import session from "express-session";
 import { google } from "googleapis";
 import crypto from "crypto";
-import cron from "node-cron";
 
 dotenv.config();
 
@@ -1024,9 +1023,9 @@ app.get("/debug/user/:id", async (req, res) => {
   }
 });
 
-cron.schedule("0 6 * * *", async () => {
+app.get("/cron/sync-colonel-daily", async (req, res) => {
   try {
-    const today = new Date().toLocaleDateString("en-CA", {
+    const dateStr = new Date().toLocaleDateString("en-CA", {
       timeZone: "Asia/Bangkok",
     });
 
@@ -1035,24 +1034,21 @@ cron.schedule("0 6 * * *", async () => {
        FROM shift_assignments s
        JOIN users u ON s.user_id = u.id
        WHERE DATE(s.shift_date)=?`,
-      [today]
+      [dateStr]
     );
 
-    await sendSummaryToColonelCalendar(today, rows);
+    await sendSummaryToColonelCalendar(dateStr, rows);
 
-    await pool.execute(
-      `INSERT INTO colonel_notifications (notify_date)
-       VALUES (?)
-       ON DUPLICATE KEY UPDATE notify_date = VALUES(notify_date)`,
-      [today]
-    );
+    console.log("Cron run success:", dateStr);
 
-    console.log("✅ Colonel daily sync success:", today);
+    res.json({
+      success: true,
+      message: `Cron sync ผู้พันวันที่ ${dateStr}`,
+    });
   } catch (err) {
-    console.error("❌ Colonel cron sync error:", err.message);
+    console.error("Cron error:", err);
+    res.status(500).json({ error: err.message });
   }
-}, {
-  timezone: "Asia/Bangkok"
 });
 
 /* =========================
