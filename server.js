@@ -846,14 +846,6 @@ app.post("/sync-colonel-daily", async (req, res) => {
 
     await sendSummaryToColonelCalendar(dateStr, rows);
 
-    // ✅ บันทึกว่าวันนี้แจ้งเตือนผู้พันแล้ว
-    await pool.execute(
-      `INSERT INTO colonel_notifications (notify_date)
-       VALUES (?)
-       ON DUPLICATE KEY UPDATE notify_date = VALUES(notify_date)`,
-      [dateStr]
-    );
-
     res.json({
       success: true,
       message: `ซิงค์แจ้งเตือนผู้พันวันที่ ${dateStr} สำเร็จ`,
