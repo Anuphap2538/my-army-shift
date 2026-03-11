@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 import session from "express-session";
 import { google } from "googleapis";
 import crypto from "crypto";
+import cron from "node-cron";
+
 
 dotenv.config();
 
@@ -1023,11 +1025,15 @@ app.get("/debug/user/:id", async (req, res) => {
   }
 });
 
-app.get("/cron/sync-colonel-daily", async (req, res) => {
+app.post("/sync-colonel-daily", async (req, res) => {
   try {
-    const dateStr = new Date().toLocaleDateString("en-CA", {
-      timeZone: "Asia/Bangkok",
-    });
+    const { date } = pickBodyOrQuery(req);
+
+    const dateStr = date
+      ? String(date).slice(0, 10)
+      : new Date().toLocaleDateString("en-CA", {
+          timeZone: "Asia/Bangkok",
+        });
 
     const [rows] = await pool.execute(
       `SELECT s.*, u.rank_name, u.email
@@ -1039,16 +1045,37 @@ app.get("/cron/sync-colonel-daily", async (req, res) => {
 
     await sendSummaryToColonelCalendar(dateStr, rows);
 
-    console.log("Cron run success:", dateStr);
-
     res.json({
       success: true,
-      message: `Cron sync ผู้พันวันที่ ${dateStr}`,
+      message: `ซิงค์แจ้งเตือนผู้พันวันที่ ${dateStr} สำเร็จ`,
     });
   } catch (err) {
-    console.error("Cron error:", err);
+    console.error("SYNC COLONEL ERROR:", err);
     res.status(500).json({ error: err.message });
   }
+});
+
+cron.schedule("0 6 * * *", async () => {
+  try {
+    const today = new Date().toLocaleDateString("en-CA", {
+      timeZone: "Asia/Bangkok",
+    });
+
+    const [rows] = await pool.execute(
+      `SELECT s.*, u.rank_name, u.email
+       FROM shift_assignments s
+       JOIN users u ON s.user_id = u.id
+       WHERE DATE(s.shift_date)=?`,
+      [today]
+    );
+
+    await sendSummaryToColonelCalendar(today, rows);
+    console.log("✅ Colonel daily sync success:", today);
+  } catch (err) {
+    console.error("❌ Colonel cron sync error:", err.message);
+  }
+}, {
+  timezone: "Asia/Bangkok"
 });
 
 /* =========================
