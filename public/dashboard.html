@@ -126,6 +126,7 @@
 <script>
     let scheduleData = {};
     let currentUserName = "";
+    let isColonelView = false;
     const YEAR = 2026;
     const MONTH = 2;
     const holidays = {
@@ -167,6 +168,13 @@ if (!sRes.ok) throw new Error("โหลดเวรไม่สำเร็จ"
 const payload = await sRes.json();
 const myShifts = Array.isArray(payload) ? payload : (payload.rows || []);
 const dashboardMode = payload.mode || "user";
+
+isColonelView = dashboardMode === "colonel";
+
+if (isColonelView) {
+    document.getElementById('userNameDisplay').innerText =
+        (currentUserName || "ผู้พัน");
+}
 
 scheduleData = {};
 if (Array.isArray(myShifts)) {
@@ -224,8 +232,14 @@ if (dashboardMode === "colonel") {
             cell.innerHTML = `<span class="${colorClass}">${i}</span>${holidayName ? `<span class="holiday-name">${holidayName}</span>` : ''}`;
 
             const duties = scheduleData[dateStr] || [];
-            const isColonelView = document.getElementById('userNameDisplay').innerText.includes('รายงาน 2 กลุ่มเวร');
             const isMe = duties.some(d => sameName(d.name, currentUserName));
+            if ((isColonelView && duties.length > 0) || isMe) {
+    cell.classList.add('duty-active');
+} else if (duties.length > 0) {
+    const dot = document.createElement('div');
+    dot.className = 'duty-dot';
+    cell.appendChild(dot);
+}
 
 if ((isColonelView && duties.length > 0) || isMe) {
     cell.classList.add('duty-active');
@@ -245,7 +259,6 @@ if ((isColonelView && duties.length > 0) || isMe) {
         const list = document.getElementById('partnerList');
 
         const myDuties = duties.filter(d => sameName(d.name, currentUserName));
-const isColonelView = document.getElementById('userNameDisplay').innerText.includes('รายงาน 2 กลุ่มเวร');
 
 if (myDuties.length === 0 && !isColonelView) return;
 
