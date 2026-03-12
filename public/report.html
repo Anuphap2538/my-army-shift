@@ -385,6 +385,71 @@
       return String(v || "").trim();
     };
 
+    function normalizeText(s) {
+  return String(s || "")
+    .trim()
+    .replace(/\s+/g, "")
+    .replace("ศปก.", "ศปก")
+    .replace("ศปก．", "ศปก")
+    .toLowerCase();
+}
+
+function getCandidatesByDuty(users, roleDisplay) {
+  const duty = normalizeText(roleDisplay);
+
+  return users.filter((u) => {
+    const userRole = normalizeText(u.role || "");
+
+    // เวรวิทยุ -> เฉพาะคนที่มีคำว่า วิทยุ
+    if (duty.includes("เวรวิทยุ")) {
+      return userRole.includes("วิทยุ");
+    }
+
+    // เวรสายตรวจสุนัขทหาร
+    if (duty.includes("เวรสายตรวจสุนัขทหาร")) {
+      return userRole.includes("สายตรวจสุนัขทหาร") || userRole.includes("สุนัขทหาร");
+    }
+
+    // เวร สยย.
+    if (duty.includes("เวรสยย")) {
+      return userRole.includes("สยย");
+    }
+
+    // เวร ชป.
+    if (duty.includes("เวรชป")) {
+      return userRole.includes("ชป");
+    }
+
+    // นายทหารเวรกองพัน
+    if (duty.includes("นายทหารเวรกองพัน")) {
+      return userRole.includes("นายทหารเวร") && !userRole.includes("ศปก");
+    }
+
+    // นายทหารเวร ศปก.
+    if (duty.includes("นายทหารเวรศปก")) {
+      return userRole.includes("นายทหารเวร") && userRole.includes("ศปก");
+    }
+
+    // จ่าเวรต่าง ๆ
+    if (duty.includes("จ่าเวร")) {
+      // เอาคนที่มีคำว่า จ่าเวร และคำเฉพาะตรงกัน
+      if (duty.includes("สนน")) return userRole.includes("สนน");
+      if (duty.includes("รก")) return userRole.includes("รก");
+      if (duty.includes("ทย")) return userRole.includes("ทย");
+      if (duty.includes("ตอ")) return userRole.includes("ตอ");
+      if (duty.includes("หน่วยฝึกทหารใหม่")) return userRole.includes("หน่วยฝึกทหารใหม่");
+      if (duty.includes("มว.สุนัขทหาร") || duty.includes("มวสุนัขทหาร")) return userRole.includes("สุนัขทหาร");
+      if (duty.includes("ขส")) return userRole.includes("ขส");
+      if (duty.includes("สูทกรรม")) return userRole.includes("สูทกรรม");
+
+      return userRole.includes("จ่าเวร");
+    }
+
+    // fallback: ถ้าชื่อหน้าที่คล้ายกันให้ผ่าน
+    return userRole.includes(duty) || duty.includes(userRole);
+  });
+}
+
     function setActiveGroupButton(group){
       const k = document.getElementById("btnKongpan");
       const s = document.getElementById("btnSpk");
@@ -575,18 +640,26 @@ async function startReplace(shiftId, day, encodedRole) {
     openModal(day);
 
     const users = await loadUsers();
-    const roleDisplay = decodeURIComponent(encodedRole);
+const roleDisplay = decodeURIComponent(encodedRole);
 
-    const select = document.getElementById(`replace-select-${shiftId}`);
-    if (!select) return;
+const select = document.getElementById(`replace-select-${shiftId}`);
+if (!select) return;
 
-    // เอาชื่อคนที่ยังไม่ link ก็เลือกได้ แต่ถ้าอยากกรองเพิ่มค่อยทำทีหลัง
-    select.innerHTML = `<option value="">เลือกชื่อแทนเวร</option>` +
-      users.map(u => `
-        <option value="${u.id}">
-          ${u.rank_name || "(ไม่ระบุชื่อ)"}${u.role ? " - " + u.role : ""}
-        </option>
-      `).join("");
+// ✅ filter ให้เหลือเฉพาะหน้าที่นั้น
+const candidates = getCandidatesByDuty(users, roleDisplay);
+
+select.innerHTML =
+  `<option value="">เลือกชื่อสำหรับหน้าที่นี้</option>` +
+  candidates.map(u => `
+    <option value="${u.id}">
+      ${u.rank_name || "(ไม่ระบุชื่อ)"}${u.role ? " - " + u.role : ""}
+    </option>
+  `).join("");
+
+// ถ้าไม่มีคนตรงหน้าที่
+if (candidates.length === 0) {
+  select.innerHTML = `<option value="">ไม่พบรายชื่อที่ตรงกับหน้าที่นี้</option>`;
+}
 
     select.focus();
   } catch (err) {
