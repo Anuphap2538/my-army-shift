@@ -748,17 +748,53 @@ app.delete("/delete-shift/:id", async (req, res) => {
 
     const shift = rows[0];
 
-    if (shift.google_token && shift.google_event_id) {
+    if (shift.google_token) {
       try {
         const auth = buildAuthFromToken(shift.google_token);
         const calendar = google.calendar({ version: "v3", auth });
 
-        await calendar.events.delete({
-          calendarId: "primary",
-          eventId: shift.google_event_id,
-        });
+        // 1) ถ้ามี event id ลบตรง
+        if (shift.google_event_id) {
+          await calendar.events.delete({
+            calendarId: "primary",
+            eventId: shift.google_event_id,
+          });
+          console.log("DELETE CALENDAR BY ID OK:", shift.google_event_id);
+        } else {
+          // 2) fallback สำหรับรายการเก่า
+          const dateOnly =
+            typeof shift.shift_date === "string"
+              ? shift.shift_date.split("T")[0]
+              : new Date(shift.shift_date).toISOString().split("T")[0];
+
+          const existing = await calendar.events.list({
+            calendarId: "primary",
+            timeMin: `${dateOnly}T00:00:00+07:00`,
+            timeMax: `${dateOnly}T23:59:59+07:00`,
+            q: "ARMY_SHIFT",
+          });
+
+          const roleText = String(shift.role_type || "").trim();
+
+          if (existing.data.items && existing.data.items.length > 0) {
+            for (const ev of existing.data.items) {
+              const evDesc = ev.description || "";
+              const evSummary = ev.summary || "";
+              const sameSystem = evDesc.includes("[ARMY_SHIFT]");
+              const sameRole = evSummary.includes(roleText);
+
+              if (sameSystem && sameRole) {
+                await calendar.events.delete({
+                  calendarId: "primary",
+                  eventId: ev.id,
+                });
+                console.log("DELETE CALENDAR FALLBACK OK:", ev.id, roleText);
+              }
+            }
+          }
+        }
       } catch (calendarErr) {
-        console.error("DELETE CALENDAR ERROR:", calendarErr.message);
+        console.error("DELETE CALENDAR ERROR:", calendarErr);
       }
     }
 
