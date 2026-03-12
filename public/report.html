@@ -376,6 +376,8 @@
     let currentModalDate = null;   // YYYY-MM-DD ของวันที่ใน popup
     let currentGroup = "กองพัน";
     let fullData = {};            // { dayNumber: [rows...] }
+    let allUsersCache = [];
+    let replacingShiftId = null;
 
     // ✅ อ่านหน้าที่ให้รองรับหลาย schema (role_type เป็นหลัก)
     const getRole = (x) => {
@@ -394,6 +396,16 @@
       if (String(group).includes("ศปก")) s.classList.add("is-active");
       else k.classList.add("is-active");
     }
+
+    async function loadUsers() {
+  if (allUsersCache.length > 0) return allUsersCache;
+
+  const res = await fetch("/get-users", { cache: "no-store" });
+  if (!res.ok) throw new Error("โหลดรายชื่อไม่สำเร็จ");
+
+  allUsersCache = await res.json();
+  return allUsersCache;
+}
 
     // ✅ ดึงปีจากข้อมูลจริง: ตอนนี้นายทำงานที่ 2026 -> fix ให้ชัวร์
     const FIX_YEAR = 2026;
@@ -512,12 +524,22 @@
           const safeName = encodeURIComponent(name);
 
 return `
-  <div class="duty-item">
-    <div>
+  <div class="duty-item" id="shift-row-${d.id}">
+    <div style="flex:1;">
       <b>${name}</b><br>
       <small>${roleDisplay}</small>
     </div>
-    <button class="btn-del" onclick="deleteEntry(${d.id}, '${safeName}', ${day})">ลบ</button>
+    <div style="display:flex; gap:8px; align-items:center;">
+      ${
+        replacingShiftId === d.id
+          ? `<select id="replace-select-${d.id}" onchange="submitReplace(${d.id}, ${day})"
+                style="padding:8px 10px; border-radius:10px; border:1px solid #cbd5e1; font-family:inherit; min-width:180px;">
+              <option value="">เลือกชื่อแทนเวร</option>
+            </select>`
+          : `<button class="btn-del" style="background:#3b82f6; color:#fff;" onclick="startReplace(${d.id}, ${day}, '${encodeURIComponent(roleDisplay)}')">สลับเวร</button>`
+      }
+      <button class="btn-del" onclick="deleteEntry(${d.id}, '${safeName}', ${day})">ลบ</button>
+    </div>
   </div>
 `;
         }).join("");
@@ -544,6 +566,76 @@ return `
   } catch (err) {
     console.error(err);
     alert("❌ ลบไม่สำเร็จ (Server Error)");
+  }
+}
+
+async function startReplace(shiftId, day, encodedRole) {
+  try {
+    replacingShiftId = shiftId;
+    openModal(day);
+
+    const users = await loadUsers();
+    const roleDisplay = decodeURIComponent(encodedRole);
+
+    const select = document.getElementById(`replace-select-${shiftId}`);
+    if (!select) return;
+
+    // เอาชื่อคนที่ยังไม่ link ก็เลือกได้ แต่ถ้าอยากกรองเพิ่มค่อยทำทีหลัง
+    select.innerHTML = `<option value="">เลือกชื่อแทนเวร</option>` +
+      users.map(u => `
+        <option value="${u.id}">
+          ${u.rank_name || "(ไม่ระบุชื่อ)"}${u.role ? " - " + u.role : ""}
+        </option>
+      `).join("");
+
+    select.focus();
+  } catch (err) {
+    console.error(err);
+    alert("❌ โหลดรายชื่อไม่สำเร็จ");
+    replacingShiftId = null;
+    openModal(day);
+  }
+}
+
+async function submitReplace(shiftId, day) {
+  const select = document.getElementById(`replace-select-${shiftId}`);
+  if (!select) return;
+
+  const newUserId = Number(select.value || 0);
+  if (!newUserId) {
+    replacingShiftId = null;
+    openModal(day);
+    return;
+  }
+
+  select.disabled = true;
+
+  try {
+    const res = await fetch("/replace-shift", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        shift_id: shiftId,
+        new_user_id: newUserId
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(`❌ ${data.error || "สลับเวรไม่สำเร็จ"}`);
+    } else {
+      await renderReport(currentGroup);
+      replacingShiftId = null;
+      openModal(day);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("❌ Server Error");
+    replacingShiftId = null;
+    openModal(day);
   }
 }
 

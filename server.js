@@ -824,6 +824,126 @@ app.delete("/delete-shift/:id", async (req, res) => {
   }
 });
 
+app.post("/replace-shift", async (req, res) => {
+  try {
+    const { shift_id, new_user_id } = req.body;
+
+    if (!shift_id || !new_user_id) {
+      return res.status(400).json({ error: "ข้อมูลไม่ครบ" });
+    }
+
+    // ดึงเวรเดิม
+    const [rows] = await pool.execute(
+      `SELECT s.*, u.rank_name, u.email, u.google_token
+       FROM shift_assignments s
+       JOIN users u ON s.user_id = u.id
+       WHERE s.id = ?`,
+      [shift_id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "ไม่พบรายการเวร" });
+    }
+
+    const oldShift = rows[0];
+
+    // ดึงคนใหม่
+    const [newUsers] = await pool.execute(
+      `SELECT id, rank_name, email, google_token
+       FROM users
+       WHERE id = ?`,
+      [new_user_id]
+    );
+
+    if (newUsers.length === 0) {
+      return res.status(404).json({ error: "ไม่พบผู้รับเวรใหม่" });
+    }
+
+    const newUser = newUsers[0];
+
+    // กันเลือกคนเดิม
+    if (Number(oldShift.user_id) === Number(new_user_id)) {
+      return res.json({ success: true, message: "ไม่มีการเปลี่ยนแปลง" });
+    }
+
+    // ลบ event เก่า
+    if (oldShift.google_token && oldShift.google_event_id) {
+      try {
+        const oldAuth = buildAuthFromToken(oldShift.google_token);
+        const oldCalendar = google.calendar({ version: "v3", auth: oldAuth });
+
+        await oldCalendar.events.delete({
+          calendarId: "primary",
+          eventId: oldShift.google_event_id,
+        });
+      } catch (err) {
+        console.error("DELETE OLD EVENT ERROR:", err.message);
+      }
+    }
+
+    // update คนใหม่
+    await pool.execute(
+      `UPDATE shift_assignments
+       SET user_id = ?, google_event_id = NULL
+       WHERE id = ?`,
+      [new_user_id, shift_id]
+    );
+
+    const dateKey =
+      typeof oldShift.shift_date === "string"
+        ? oldShift.shift_date.split("T")[0]
+        : new Date(oldShift.shift_date).toISOString().split("T")[0];
+
+    // ดึงเวรทั้งวันใหม่หลังเปลี่ยนแล้ว
+    const [dayShifts] = await pool.execute(
+      `SELECT s.*, u.rank_name, u.email
+       FROM shift_assignments s
+       JOIN users u ON s.user_id = u.id
+       WHERE DATE(s.shift_date)=?`,
+      [dateKey]
+    );
+
+    let newEventId = null;
+
+    // สร้าง event ใหม่ให้คนใหม่
+    if (newUser.google_token) {
+      const newAuth = buildAuthFromToken(newUser.google_token);
+
+      const googleRes = await sendToGoogleCalendar(
+        newAuth,
+        {
+          id: shift_id,
+          shift_date: oldShift.shift_date,
+          role_type: oldShift.role_type,
+          group_name: oldShift.group_name,
+          shift_turn: oldShift.shift_turn,
+          email: newUser.email,
+          rank_name: newUser.rank_name,
+        },
+        dayShifts
+      );
+
+      newEventId = googleRes?.data?.id || null;
+    }
+
+    await pool.execute(
+      `UPDATE shift_assignments
+       SET google_event_id = ?
+       WHERE id = ?`,
+      [newEventId, shift_id]
+    );
+
+    res.json({
+      success: true,
+      message: "สลับเวรสำเร็จ",
+      new_name: newUser.rank_name
+    });
+  } catch (err) {
+    console.error("REPLACE SHIFT ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 /* =========================
 API: REPORT (calendar report by group)
 ========================= */
