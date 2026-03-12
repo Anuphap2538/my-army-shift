@@ -655,22 +655,25 @@ app.post("/assign-shift", async (req, res) => {
     if (existing.length > 0) return res.status(400).send("มีเวรแล้ว");
 
     // ลอง insert แบบ full ก่อน
-    try {
-      await pool.execute(
-        `INSERT INTO shift_assignments
-         (user_id, shift_date, role_type, group_name, shift_turn, note)
-         VALUES (?,?,?,?,?,?)`,
-        [user_id, shift_date, role_type, groupNorm, shift_turn, note]
-      );
-    } catch (e) {
-      // fallback สำหรับ schema เก่า
-      await pool.execute(
-        `INSERT INTO shift_assignments
-         (user_id, shift_date, role_type, group_name)
-         VALUES (?,?,?,?)`,
-        [user_id, shift_date, role_type, groupNorm]
-      );
-    }
+    let insertId = null;
+
+try {
+  const [result] = await pool.execute(
+    `INSERT INTO shift_assignments
+     (user_id, shift_date, role_type, group_name, shift_turn, note)
+     VALUES (?,?,?,?,?,?)`,
+    [user_id, shift_date, role_type, groupNorm, shift_turn, note]
+  );
+  insertId = result.insertId;
+} catch (e) {
+  const [result] = await pool.execute(
+    `INSERT INTO shift_assignments
+     (user_id, shift_date, role_type, group_name)
+     VALUES (?,?,?,?)`,
+    [user_id, shift_date, role_type, groupNorm]
+  );
+  insertId = result.insertId;
+}
 
     // ถ้าคนนี้ link google แล้ว -> ส่งเข้า calendar ทันที (best effort)
     const [user] = await pool.execute(
@@ -688,17 +691,30 @@ app.post("/assign-shift", async (req, res) => {
            WHERE s.shift_date=?`,
           [shift_date]
         );
-        await sendToGoogleCalendar(
-          auth,
-          {
-            shift_date,
-            role_type,
-            group_name: groupNorm,
-            email: user[0].email,
-            rank_name: user[0].rank_name,
-          },
-          dayShifts
-        );
+        const googleRes = await sendToGoogleCalendar(
+  auth,
+  {
+    id: insertId,
+    shift_date,
+    role_type,
+    group_name: groupNorm,
+    email: user[0].email,
+    rank_name: user[0].rank_name,
+    shift_turn
+  },
+  dayShifts
+);
+
+const googleEventId = googleRes?.data?.id || null;
+
+if (insertId && googleEventId) {
+  await pool.execute(
+    `UPDATE shift_assignments
+     SET google_event_id=?
+     WHERE id=?`,
+    [googleEventId, insertId]
+  );
+}
       } catch (tokenErr) {
         console.error("❌ Token/Calendar Error:", tokenErr.message);
       }
@@ -718,7 +734,6 @@ app.delete("/delete-shift/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    // 1) ดึงข้อมูลเวรที่กำลังจะลบก่อน
     const [rows] = await pool.execute(
       `SELECT s.*, u.rank_name, u.email, u.google_token
        FROM shift_assignments s
@@ -733,16 +748,20 @@ app.delete("/delete-shift/:id", async (req, res) => {
 
     const shift = rows[0];
 
-    // 2) ถ้ามี google_token ให้ลบ event ออกจาก Google Calendar ก่อน
-    if (shift.google_token) {
+    if (shift.google_token && shift.google_event_id) {
       try {
-        await deleteFromGoogleCalendar(shift);
+        const auth = buildAuthFromToken(shift.google_token);
+        const calendar = google.calendar({ version: "v3", auth });
+
+        await calendar.events.delete({
+          calendarId: "primary",
+          eventId: shift.google_event_id,
+        });
       } catch (calendarErr) {
         console.error("DELETE CALENDAR ERROR:", calendarErr.message);
       }
     }
 
-    // 3) ค่อยลบจากฐานข้อมูล
     await pool.execute("DELETE FROM shift_assignments WHERE id=?", [id]);
 
     res.send("ok");
