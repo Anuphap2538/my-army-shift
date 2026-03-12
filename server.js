@@ -452,6 +452,48 @@ else {
   });
 }
 
+async function deleteFromGoogleCalendar(shift) {
+  if (!shift.google_token) return;
+
+  const auth = buildAuthFromToken(shift.google_token);
+  const calendar = google.calendar({ version: "v3", auth });
+
+  const dateOnly =
+    typeof shift.shift_date === "string"
+      ? shift.shift_date.split("T")[0]
+      : new Date(shift.shift_date).toISOString().split("T")[0];
+
+  const roleText = String(shift.role_type || "").trim();
+
+  const existing = await calendar.events.list({
+    calendarId: "primary",
+    timeMin: `${dateOnly}T00:00:00+07:00`,
+    timeMax: `${dateOnly}T23:59:59+07:00`,
+    q: "ARMY_SHIFT",
+  });
+
+  if (existing.data.items && existing.data.items.length > 0) {
+    for (const ev of existing.data.items) {
+      const evDesc = ev.description || "";
+      const evSummary = ev.summary || "";
+
+      const sameSystem = evDesc.includes("[ARMY_SHIFT]");
+      const sameRole = evSummary.includes(roleText);
+
+      if (sameSystem && sameRole) {
+        try {
+          await calendar.events.delete({
+            calendarId: "primary",
+            eventId: ev.id,
+          });
+        } catch (err) {
+          console.log("Delete calendar event error:", err.message);
+        }
+      }
+    }
+  }
+}
+
 async function sendSummaryToColonelCalendar(targetDate, allShifts) {
   const colonel = await getColonelUser();
   const auth = buildAuthFromToken(colonel.google_token);
@@ -675,9 +717,37 @@ API: DELETE SHIFT
 app.delete("/delete-shift/:id", async (req, res) => {
   try {
     const { id } = req.params;
+
+    // 1) ดึงข้อมูลเวรที่กำลังจะลบก่อน
+    const [rows] = await pool.execute(
+      `SELECT s.*, u.rank_name, u.email, u.google_token
+       FROM shift_assignments s
+       JOIN users u ON s.user_id = u.id
+       WHERE s.id = ?`,
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).send("ไม่พบรายการเวร");
+    }
+
+    const shift = rows[0];
+
+    // 2) ถ้ามี google_token ให้ลบ event ออกจาก Google Calendar ก่อน
+    if (shift.google_token) {
+      try {
+        await deleteFromGoogleCalendar(shift);
+      } catch (calendarErr) {
+        console.error("DELETE CALENDAR ERROR:", calendarErr.message);
+      }
+    }
+
+    // 3) ค่อยลบจากฐานข้อมูล
     await pool.execute("DELETE FROM shift_assignments WHERE id=?", [id]);
+
     res.send("ok");
   } catch (err) {
+    console.error("DELETE SHIFT ERROR:", err);
     res.status(500).send(err.message);
   }
 });
