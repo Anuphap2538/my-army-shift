@@ -173,7 +173,7 @@ isColonelView = dashboardMode === "colonel";
 
 if (isColonelView) {
     document.getElementById('userNameDisplay').innerText =
-        (currentUserName || "ผู้พัน");
+        (currentUserName || "ผู้พัน") + " (ดูเวร 2 กลุ่ม)";
 }
 
 scheduleData = {};
@@ -191,10 +191,8 @@ if (Array.isArray(myShifts)) {
     });
 }
 
-if (dashboardMode === "colonel") {
-    document.getElementById('userNameDisplay').innerText =
-        (currentUserName || "ผู้พัน");
-}
+console.log("PAYLOAD", payload);
+console.log("SCHEDULE KEYS", Object.keys(scheduleData));
 
             renderCalendar();
         } catch (e) {
@@ -234,14 +232,6 @@ if (dashboardMode === "colonel") {
             const duties = scheduleData[dateStr] || [];
             const isMe = duties.some(d => sameName(d.name, currentUserName));
             if ((isColonelView && duties.length > 0) || isMe) {
-    cell.classList.add('duty-active');
-} else if (duties.length > 0) {
-    const dot = document.createElement('div');
-    dot.className = 'duty-dot';
-    cell.appendChild(dot);
-}
-
-if ((isColonelView && duties.length > 0) || isMe) {
     cell.classList.add('duty-active');
 } else if (duties.length > 0) {
     const dot = document.createElement('div');
