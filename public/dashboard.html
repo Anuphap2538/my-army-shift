@@ -45,6 +45,7 @@
         .user-info { text-align: left; }
         .user-label { font-size: 12px; color: #64748b; margin: 0; }
         .user-name { font-size: 1.1rem; font-weight: 700; color: var(--work); margin: 0; }
+        .user-role {font-size: 0.8rem; color: #64748b; margin: 2px 0 0 0; }
 
         .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; background: rgba(0,0,0,0.05); }
         .day-label { text-align: center; font-size: 11px; font-weight: 700; color: #64748b; padding: 8px 0; }
@@ -95,6 +96,7 @@
             <div class="user-info">
                 <p class="user-label">ข้อมูลเวรของท่าน</p>
                 <p id="userNameDisplay" class="user-name">กำลังโหลดข้อมูล...</p>
+                <p id="userRoleDisplay" class="user-role"></p>
             </div>
         </div>
     </div>
@@ -177,6 +179,7 @@
             const userData = await res.json();
             currentUserName = userData.name || "";
             document.getElementById('userNameDisplay').innerText = currentUserName || "ไม่พบชื่อผู้ใช้";
+            document.getElementById('userRoleDisplay').innerText = "ผู้บังคับกองพันทหารอากาศโยธิน รร.การบิน";
 
             const dutyUrl = token
                 ? `/get-my-duty?token=${encodeURIComponent(token)}`
@@ -193,7 +196,10 @@ isColonelView = dashboardMode === "colonel";
 
 if (isColonelView) {
     document.getElementById('userNameDisplay').innerText =
-        (currentUserName || "ผู้พัน") + " (ดูเวร 2 กลุ่ม)";
+        (currentUserName || "ผู้พัน");
+
+    document.getElementById('userRoleDisplay').innerText =
+        "ผู้บังคับกองพันทหารอากาศโยธิน รร.การบิน";
 }
 
 scheduleData = {};
