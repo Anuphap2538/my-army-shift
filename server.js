@@ -1207,15 +1207,12 @@ app.get("/get-my-duty", async (req, res) => {
 
     // ===== ผู้พัน: ดูเฉพาะวันรายงาน และเฉพาะ 2 กลุ่ม =====
     if (isColonel) {
+
   const [rows] = await pool.execute(
     `SELECT s.*, u.rank_name
      FROM shift_assignments s
      JOIN users u ON s.user_id = u.id
-     WHERE DATE(s.shift_date) IN (
-       SELECT notify_date
-       FROM colonel_notifications
-     )
-     AND TRIM(s.group_name) IN ('กองพัน', 'ศปก', 'ศปก.')
+     WHERE TRIM(s.group_name) IN ('กองพัน', 'ศปก', 'ศปก.')
      ORDER BY s.shift_date, s.group_name, s.role_type`
   );
 

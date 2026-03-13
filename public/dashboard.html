@@ -100,7 +100,7 @@
     </div>
 
     <div class="card" style="padding:0; overflow:hidden;">
-        <div style="padding: 15px; text-align: center; font-weight: bold; font-size: 1.2em; background: rgba(255,255,255,0.2);">มีนาคม 2569</div>
+        <div id="monthTitle" style="padding: 15px; text-align: center; font-weight: bold; font-size: 1.2em; background: rgba(255,255,255,0.2);"></div>
         <div class="grid">
             <div class="day-label sunday">อา</div><div class="day-label">จ</div><div class="day-label">อ</div>
             <div class="day-label">พ</div><div class="day-label">พฤ</div><div class="day-label">ศ</div>
@@ -127,8 +127,10 @@
     let scheduleData = {};
     let currentUserName = "";
     let isColonelView = false;
-    const YEAR = 2026;
-    const MONTH = 2;
+    const today = new Date();
+    const thaiToday = new Date(today.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+    const YEAR = thaiToday.getFullYear();
+    const MONTH = thaiToday.getMonth();
     const holidays = {
         "2026-03-03": "วันมาฆบูชา",
         "2026-03-04": "วันหยุดชดเชยมาฆบูชา"
@@ -137,9 +139,27 @@
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get("token") || "";
 
+    function toThaiDateKey(value) {
+    const d = new Date(value);
+    const thai = new Date(d.toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+    const y = thai.getFullYear();
+    const m = String(thai.getMonth() + 1).padStart(2, '0');
+    const day = String(thai.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
     function sameName(a, b) {
         return String(a || "").replace(/\s+/g, '') === String(b || "").replace(/\s+/g, '');
     }
+
+    function renderMonthTitle() {
+    const thaiMonths = [
+        "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+        "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+    ];
+    document.getElementById("monthTitle").innerText =
+        `${thaiMonths[MONTH]} ${YEAR + 543}`;
+}
 
     async function init() {
         try {
@@ -179,25 +199,27 @@ if (isColonelView) {
 scheduleData = {};
 if (Array.isArray(myShifts)) {
     myShifts.forEach(s => {
-        const dateStr = String(s.shift_date).split('T')[0];
-        if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
+    const dateStr = toThaiDateKey(s.shift_date);
+    if (!scheduleData[dateStr]) scheduleData[dateStr] = [];
 
-        scheduleData[dateStr].push({
-            name: s.rank_name || "เจ้าหน้าที่",
-            role: s.role_type || "",
-            turn: parseInt(s.shift_turn || 1),
-            group: s.group_name || ""
-        });
+    scheduleData[dateStr].push({
+        name: s.rank_name || "เจ้าหน้าที่",
+        role: s.role_type || "",
+        turn: parseInt(s.shift_turn || 1),
+        group: s.group_name || ""
     });
+});
 }
 
 console.log("PAYLOAD", payload);
 console.log("SCHEDULE KEYS", Object.keys(scheduleData));
+renderMonthTitle();
+renderCalendar();
 
-            renderCalendar();
         } catch (e) {
             console.error("Init Error:", e);
             document.getElementById('userNameDisplay').innerText = "โหลดข้อมูลไม่สำเร็จ";
+            renderMonthTitle();
             renderCalendar();
         }
     }
@@ -253,8 +275,13 @@ console.log("SCHEDULE KEYS", Object.keys(scheduleData));
 if (myDuties.length === 0 && !isColonelView) return;
 
         modal.style.display = 'flex';
-        document.getElementById('displayDate').innerText =
-            `วันที่ ${day} มีนาคม 2569 ${holidayName ? '(' + holidayName + ')' : ''}`;
+        const thaiMonths = [
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+];
+
+document.getElementById('displayDate').innerText =
+    `วันที่ ${day} ${thaiMonths[MONTH]} ${YEAR + 543} ${holidayName ? '(' + holidayName + ')' : ''}`;
 
         const orderKongPan = [
             "นายทหารเวรกองพัน",
