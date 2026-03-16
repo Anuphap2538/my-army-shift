@@ -698,8 +698,10 @@ async function submitReplace(shiftId, day) {
 }
 
     function closeModal(){
-      document.getElementById("dutyModal").style.display = "none";
-    }
+  document.getElementById("dutyModal").style.display = "none";
+  currentModalDate = null;
+  replacingShiftId = null;
+}
 
     window.onclick = (e) => {
       if (e.target === document.getElementById("dutyModal")) closeModal();
@@ -834,11 +836,11 @@ function getRankWeightFromName(fullName) {
 
 async function syncColonelDaily() {
   const btn = document.getElementById("syncColonelBtn");
-  const month = Number(document.getElementById("monthSelect").value);
-  const today = new Date();
-  const year = 2026;
-  const dd = String(today.getDate()).padStart(2, "0");
-  const mm = String(month).padStart(2, "0");
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
   const date = `${year}-${mm}-${dd}`;
 
   if (!confirm(`ต้องการซิงค์แจ้งเตือนผู้พันสำหรับวันที่ ${date} หรือไม่?`)) return;
