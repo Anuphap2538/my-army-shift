@@ -391,62 +391,39 @@
     .replace(/\s+/g, "")
     .replace("ศปก.", "ศปก")
     .replace("ศปก．", "ศปก")
+    .replace(/\(/g, "(")
+    .replace(/\)/g, ")")
     .toLowerCase();
 }
 
 function getCandidatesByDuty(users, roleDisplay) {
   const duty = normalizeText(roleDisplay);
 
+  const exactMap = {
+    "นายทหารเวรกองพัน": ["นายทหารเวรกองพัน"],
+    "นายทหารเวรศปก": ["นายทหารเวรศปก"],
+    "จ่าเวรร้อยสนน.": ["จ่าเวรร้อยสนน."],
+    "จ่าเวรร้อยรก.": ["จ่าเวรร้อยรก."],
+    "จ่าเวรร้อยทย.": ["จ่าเวรร้อยทย."],
+    "จ่าเวรร้อยตอ.": ["จ่าเวรร้อยตอ."],
+    "จ่าเวรหน่วยฝึกทหารใหม่": ["จ่าเวรหน่วยฝึกทหารใหม่"],
+    "จ่าเวรมว.สุนัขทหาร": ["จ่าเวรมว.สุนัขทหาร"],
+    "จ่าเวรขส.": ["จ่าเวรขส."],
+    "จ่าเวรสูทกรรม": ["จ่าเวรสูทกรรม"],
+    "เวรสยย.": ["เวรสยย."],
+    "เวรชป.": ["เวรชป."],
+    "เวรสายตรวจสุนัขทหาร": ["เวรสายตรวจสุนัขทหาร"],
+    "เวรวิทยุ": ["เวรวิทยุ"],
+    "เวรวิทยุ(1)": ["เวรวิทยุ"],
+    "เวรวิทยุ(2)": ["เวรวิทยุ"],
+    "เวรวิทยุ(3)": ["เวรวิทยุ"]
+  };
+
+  const allowed = exactMap[duty] || [duty];
+
   return users.filter((u) => {
     const userRole = normalizeText(u.role || "");
-
-    // เวรวิทยุ -> เฉพาะคนที่มีคำว่า วิทยุ
-    if (duty.includes("เวรวิทยุ")) {
-      return userRole.includes("วิทยุ");
-    }
-
-    // เวรสายตรวจสุนัขทหาร
-    if (duty.includes("เวรสายตรวจสุนัขทหาร")) {
-      return userRole.includes("สายตรวจสุนัขทหาร") || userRole.includes("สุนัขทหาร");
-    }
-
-    // เวร สยย.
-    if (duty.includes("เวรสยย")) {
-      return userRole.includes("สยย");
-    }
-
-    // เวร ชป.
-    if (duty.includes("เวรชป")) {
-      return userRole.includes("ชป");
-    }
-
-    // นายทหารเวรกองพัน
-    if (duty.includes("นายทหารเวรกองพัน")) {
-      return userRole.includes("นายทหารเวร") && !userRole.includes("ศปก");
-    }
-
-    // นายทหารเวร ศปก.
-    if (duty.includes("นายทหารเวรศปก")) {
-      return userRole.includes("นายทหารเวร") && userRole.includes("ศปก");
-    }
-
-    // จ่าเวรต่าง ๆ
-    if (duty.includes("จ่าเวร")) {
-      // เอาคนที่มีคำว่า จ่าเวร และคำเฉพาะตรงกัน
-      if (duty.includes("สนน")) return userRole.includes("สนน");
-      if (duty.includes("รก")) return userRole.includes("รก");
-      if (duty.includes("ทย")) return userRole.includes("ทย");
-      if (duty.includes("ตอ")) return userRole.includes("ตอ");
-      if (duty.includes("หน่วยฝึกทหารใหม่")) return userRole.includes("หน่วยฝึกทหารใหม่");
-      if (duty.includes("มว.สุนัขทหาร") || duty.includes("มวสุนัขทหาร")) return userRole.includes("สุนัขทหาร");
-      if (duty.includes("ขส")) return userRole.includes("ขส");
-      if (duty.includes("สูทกรรม")) return userRole.includes("สูทกรรม");
-
-      return userRole.includes("จ่าเวร");
-    }
-
-    // fallback: ถ้าชื่อหน้าที่คล้ายกันให้ผ่าน
-    return userRole.includes(duty) || duty.includes(userRole);
+    return allowed.some((x) => userRole === normalizeText(x));
   });
 }
 
@@ -613,7 +590,7 @@ return `
       document.getElementById("dutyModal").style.display = "flex";
     }
 
-    async function deleteEntry(id, encodedName, day){
+    async function deleteEntry(id, encodedName, day) {
   const name = decodeURIComponent(encodedName);
 
   if (!confirm(`ลบ ${name}?`)) return;
@@ -624,7 +601,11 @@ return `
 
     if (res.ok) {
       await renderReport(currentGroup);
-      openModal(day);   // ✅ เปิด popup วันเดิมกลับมาใหม่
+      openModal(day);
+
+      if (msg.startsWith("ok|warning:")) {
+        alert("⚠️ ลบในฐานข้อมูลสำเร็จแล้ว แต่ Google Calendar มีปัญหา:\n" + msg.replace("ok|warning:", ""));
+      }
     } else {
       alert("❌ ลบไม่สำเร็จ: " + msg);
     }
@@ -703,6 +684,10 @@ async function submitReplace(shiftId, day) {
       await renderReport(currentGroup);
       replacingShiftId = null;
       openModal(day);
+
+      if (data.warning) {
+        alert("⚠️ สลับเวรในฐานข้อมูลสำเร็จแล้ว แต่ Google Calendar มีปัญหา:\n" + data.warning);
+      }
     }
   } catch (err) {
     console.error(err);
@@ -719,6 +704,21 @@ async function submitReplace(shiftId, day) {
     window.onclick = (e) => {
       if (e.target === document.getElementById("dutyModal")) closeModal();
     };
+
+    setInterval(async () => {
+  try {
+    await renderReport(currentGroup);
+
+    // ถ้ามี modal เปิดอยู่ ให้เปิดวันเดิมซ้ำเพื่อ refresh รายชื่อใน popup
+    if (currentModalDate && document.getElementById("dutyModal").style.display === "flex") {
+      const day = Number(currentModalDate.slice(8, 10));
+      openModal(day);
+    }
+  } catch (err) {
+    console.error("AUTO REFRESH ERROR:", err);
+  }
+}, 30000);
+
     function normalizeRankText(s) {
   return String(s || "")
     .replace(/\s+/g, " ")

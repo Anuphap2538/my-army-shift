@@ -297,8 +297,91 @@ function buildAuthFromToken(tokenJson) {
     process.env.GOOGLE_CLIENT_SECRET,
     REDIRECT_URI
   );
-  auth.setCredentials(JSON.parse(tokenJson));
+
+  let parsed = {};
+  try {
+    parsed = typeof tokenJson === "string" ? JSON.parse(tokenJson) : (tokenJson || {});
+  } catch (e) {
+    parsed = {};
+  }
+
+  auth.setCredentials(parsed);
   return auth;
+}
+
+async function deleteGoogleEventBestEffort(tokenJson, googleEventId, shiftDate, roleType) {
+  if (!tokenJson) {
+    return { ok: false, warning: "ไม่มี google token" };
+  }
+
+  try {
+    const auth = buildAuthFromToken(tokenJson);
+    const calendar = google.calendar({ version: "v3", auth });
+
+    let deleted = false;
+
+    // 1) ลบด้วย event id ก่อน
+    if (googleEventId) {
+      try {
+        await calendar.events.delete({
+          calendarId: "primary",
+          eventId: googleEventId,
+        });
+        deleted = true;
+      } catch (err) {
+        console.error("DELETE BY ID FAIL:", err.message);
+      }
+    }
+
+    // 2) fallback หา event ของระบบในวันเดียวกัน
+    if (!deleted) {
+      const dateOnly =
+        typeof shiftDate === "string"
+          ? shiftDate.split("T")[0]
+          : new Date(shiftDate).toISOString().split("T")[0];
+
+      const existing = await calendar.events.list({
+        calendarId: "primary",
+        timeMin: `${dateOnly}T00:00:00+07:00`,
+        timeMax: `${dateOnly}T23:59:59+07:00`,
+        q: "ARMY_SHIFT",
+      });
+
+      const roleText = String(roleType || "").trim();
+
+      if (existing.data.items && existing.data.items.length > 0) {
+        for (const ev of existing.data.items) {
+          const evDesc = ev.description || "";
+          const evSummary = ev.summary || "";
+
+          const sameSystem = evDesc.includes("[ARMY_SHIFT]");
+          const sameRole = evSummary.includes(roleText) || evDesc.includes(roleText);
+
+          if (sameSystem && sameRole) {
+            try {
+              await calendar.events.delete({
+                calendarId: "primary",
+                eventId: ev.id,
+              });
+              deleted = true;
+              break;
+            } catch (err) {
+              console.error("DELETE FALLBACK FAIL:", err.message);
+            }
+          }
+        }
+      }
+    }
+
+    if (!deleted) {
+      return { ok: false, warning: "หา event ใน Google Calendar ไม่เจอ หรือ token ใช้ไม่ได้" };
+    }
+
+    return { ok: true };
+  } catch (err) {
+    console.error("deleteGoogleEventBestEffort ERROR:", err.message);
+    return { ok: false, warning: err.message };
+  }
 }
 
 async function getColonelUser() {
@@ -748,74 +831,26 @@ app.delete("/delete-shift/:id", async (req, res) => {
 
     const shift = rows[0];
 
+    let warning = null;
+
     if (shift.google_token) {
-      const auth = buildAuthFromToken(shift.google_token);
-      const calendar = google.calendar({ version: "v3", auth });
+      const result = await deleteGoogleEventBestEffort(
+        shift.google_token,
+        shift.google_event_id,
+        shift.shift_date,
+        shift.role_type
+      );
 
-      let deleted = false;
-
-      // 1) ลบด้วย google_event_id ก่อน
-      if (shift.google_event_id) {
-        try {
-          await calendar.events.delete({
-            calendarId: "primary",
-            eventId: shift.google_event_id,
-          });
-          console.log("DELETE CALENDAR BY ID OK:", shift.google_event_id);
-          deleted = true;
-        } catch (err) {
-          console.error("DELETE BY ID FAIL:", err.message);
-        }
-      }
-
-      // 2) ถ้ายังไม่ลบได้ ให้ fallback หา event ล่าสุดของ role นี้ในวันเดียวกัน
-      if (!deleted) {
-        const dateOnly =
-          typeof shift.shift_date === "string"
-            ? shift.shift_date.split("T")[0]
-            : new Date(shift.shift_date).toISOString().split("T")[0];
-
-        const existing = await calendar.events.list({
-          calendarId: "primary",
-          timeMin: `${dateOnly}T00:00:00+07:00`,
-          timeMax: `${dateOnly}T23:59:59+07:00`,
-          q: "ARMY_SHIFT",
-        });
-
-        const roleText = String(shift.role_type || "").trim();
-
-        if (existing.data.items && existing.data.items.length > 0) {
-          for (const ev of existing.data.items) {
-            const evDesc = ev.description || "";
-            const evSummary = ev.summary || "";
-
-            const sameSystem = evDesc.includes("[ARMY_SHIFT]");
-            const sameRole =
-              evSummary.includes(roleText) ||
-              evDesc.includes(roleText);
-
-            if (sameSystem && sameRole) {
-              try {
-                await calendar.events.delete({
-                  calendarId: "primary",
-                  eventId: ev.id,
-                });
-                console.log("DELETE CALENDAR FALLBACK OK:", ev.id, roleText);
-                deleted = true;
-              } catch (err) {
-                console.error("DELETE FALLBACK FAIL:", err.message);
-              }
-            }
-          }
-        }
-      }
-
-      if (!deleted) {
-        return res.status(500).send("ลบจากฐานข้อมูลไม่ได้ เพราะหา event ใน Google Calendar ไม่เจอ");
+      if (!result.ok) {
+        warning = result.warning || "ลบ Google Calendar ไม่สำเร็จ";
       }
     }
 
     await pool.execute("DELETE FROM shift_assignments WHERE id=?", [id]);
+
+    if (warning) {
+      return res.status(200).send(`ok|warning:${warning}`);
+    }
 
     res.send("ok");
   } catch (err) {
@@ -832,7 +867,6 @@ app.post("/replace-shift", async (req, res) => {
       return res.status(400).json({ error: "ข้อมูลไม่ครบ" });
     }
 
-    // ดึงเวรเดิม
     const [rows] = await pool.execute(
       `SELECT s.*, u.rank_name, u.email, u.google_token
        FROM shift_assignments s
@@ -847,7 +881,6 @@ app.post("/replace-shift", async (req, res) => {
 
     const oldShift = rows[0];
 
-    // ดึงคนใหม่
     const [newUsers] = await pool.execute(
       `SELECT id, rank_name, email, google_token
        FROM users
@@ -861,27 +894,27 @@ app.post("/replace-shift", async (req, res) => {
 
     const newUser = newUsers[0];
 
-    // กันเลือกคนเดิม
     if (Number(oldShift.user_id) === Number(new_user_id)) {
       return res.json({ success: true, message: "ไม่มีการเปลี่ยนแปลง" });
     }
 
-    // ลบ event เก่า
-    if (oldShift.google_token && oldShift.google_event_id) {
-      try {
-        const oldAuth = buildAuthFromToken(oldShift.google_token);
-        const oldCalendar = google.calendar({ version: "v3", auth: oldAuth });
+    let warning = null;
 
-        await oldCalendar.events.delete({
-          calendarId: "primary",
-          eventId: oldShift.google_event_id,
-        });
-      } catch (err) {
-        console.error("DELETE OLD EVENT ERROR:", err.message);
+    // ลบ event เก่าของคนเดิมแบบ best effort
+    if (oldShift.google_token) {
+      const result = await deleteGoogleEventBestEffort(
+        oldShift.google_token,
+        oldShift.google_event_id,
+        oldShift.shift_date,
+        oldShift.role_type
+      );
+
+      if (!result.ok) {
+        warning = result.warning || "ลบ event เก่าไม่สำเร็จ";
       }
     }
 
-    // update คนใหม่
+    // update DB ก่อน
     await pool.execute(
       `UPDATE shift_assignments
        SET user_id = ?, google_event_id = NULL
@@ -894,7 +927,6 @@ app.post("/replace-shift", async (req, res) => {
         ? oldShift.shift_date.split("T")[0]
         : new Date(oldShift.shift_date).toISOString().split("T")[0];
 
-    // ดึงเวรทั้งวันใหม่หลังเปลี่ยนแล้ว
     const [dayShifts] = await pool.execute(
       `SELECT s.*, u.rank_name, u.email
        FROM shift_assignments s
@@ -905,25 +937,30 @@ app.post("/replace-shift", async (req, res) => {
 
     let newEventId = null;
 
-    // สร้าง event ใหม่ให้คนใหม่
+    // สร้าง event ใหม่แบบ best effort
     if (newUser.google_token) {
-      const newAuth = buildAuthFromToken(newUser.google_token);
+      try {
+        const newAuth = buildAuthFromToken(newUser.google_token);
 
-      const googleRes = await sendToGoogleCalendar(
-        newAuth,
-        {
-          id: shift_id,
-          shift_date: oldShift.shift_date,
-          role_type: oldShift.role_type,
-          group_name: oldShift.group_name,
-          shift_turn: oldShift.shift_turn,
-          email: newUser.email,
-          rank_name: newUser.rank_name,
-        },
-        dayShifts
-      );
+        const googleRes = await sendToGoogleCalendar(
+          newAuth,
+          {
+            id: shift_id,
+            shift_date: oldShift.shift_date,
+            role_type: oldShift.role_type,
+            group_name: oldShift.group_name,
+            shift_turn: oldShift.shift_turn,
+            email: newUser.email,
+            rank_name: newUser.rank_name,
+          },
+          dayShifts
+        );
 
-      newEventId = googleRes?.data?.id || null;
+        newEventId = googleRes?.data?.id || null;
+      } catch (err) {
+        console.error("CREATE NEW EVENT ERROR:", err.message);
+        warning = warning || err.message;
+      }
     }
 
     await pool.execute(
@@ -935,7 +972,8 @@ app.post("/replace-shift", async (req, res) => {
 
     res.json({
       success: true,
-      message: "สลับเวรสำเร็จ",
+      message: warning ? "สลับเวรสำเร็จ แต่ Google Calendar มีคำเตือน" : "สลับเวรสำเร็จ",
+      warning,
       new_name: newUser.rank_name
     });
   } catch (err) {
@@ -1302,36 +1340,6 @@ app.get("/debug/user/:id", async (req, res) => {
     );
     res.json(rows[0] || null);
   } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/sync-colonel-daily", async (req, res) => {
-  try {
-    const { date } = pickBodyOrQuery(req);
-
-    const dateStr = date
-      ? String(date).slice(0, 10)
-      : new Date().toLocaleDateString("en-CA", {
-          timeZone: "Asia/Bangkok",
-        });
-
-    const [rows] = await pool.execute(
-      `SELECT s.*, u.rank_name, u.email
-       FROM shift_assignments s
-       JOIN users u ON s.user_id = u.id
-       WHERE DATE(s.shift_date)=?`,
-      [dateStr]
-    );
-
-    await sendSummaryToColonelCalendar(dateStr, rows);
-
-    res.json({
-      success: true,
-      message: `ซิงค์แจ้งเตือนผู้พันวันที่ ${dateStr} สำเร็จ`,
-    });
-  } catch (err) {
-    console.error("SYNC COLONEL ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 });
