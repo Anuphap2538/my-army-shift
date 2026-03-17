@@ -808,30 +808,39 @@ function getRankWeightFromName(fullName) {
 }
 
     async function syncAllToGoogle(){
-      const btn = document.getElementById("syncBtn");
-      const month = Number(document.getElementById("monthSelect").value);
-      const year = FIX_YEAR;
-      const group = currentGroup;
+  const btn = document.getElementById("syncBtn");
+  const month = Number(document.getElementById("monthSelect").value);
+  const year = FIX_YEAR;
+  const group = currentGroup;
 
-      if (!confirm(`ต้องการซิงค์เวร ${group} เดือนนี้เข้า Google Calendar หรือไม่?`)) return;
+  if (!confirm(`ต้องการซิงค์เวร ${group} เดือนนี้เข้า Google Calendar หรือไม่?`)) return;
 
-      btn.disabled = true;
-      const old = btn.innerHTML;
-      btn.innerHTML = "⏳ กำลังซิงค์...";
+  btn.disabled = true;
+  const old = btn.innerHTML;
+  btn.innerHTML = "⏳ กำลังซิงค์...";
 
-      try{
-        const res = await fetch(`/sync-existing-shifts?month=${month}&year=${year}&group=${encodeURIComponent(group)}`, { method:"POST" });
-        const data = await res.json();
-        if (res.ok) alert(`✅ ${data.message}`);
-        else alert(`❌ Sync ไม่สำเร็จ: ${data.error || "unknown"}`);
-      }catch(err){
-        console.error(err);
-        alert("❌ Server Error");
-      }finally{
-        btn.disabled = false;
-        btn.innerHTML = old;
-      }
+  try{
+    const res = await fetch(
+      `/sync-existing-shifts?month=${month}&year=${year}&group=${encodeURIComponent(group)}`,
+      { method:"POST" }
+    );
+
+    const data = await res.json();
+
+    if (res.ok) {
+      alert(`✅ ${data.message}`);
+      await renderReport(currentGroup);   // ⭐ โหลดตารางใหม่
+    } else {
+      alert(`❌ Sync ไม่สำเร็จ: ${data.error || "unknown"}`);
     }
+  } catch(err){
+    console.error("SYNC ALL ERROR:", err);
+    alert("❌ Server Error");
+  } finally{
+    btn.disabled = false;
+    btn.innerHTML = old;
+  }
+}
 
 
 async function syncColonelDaily() {
