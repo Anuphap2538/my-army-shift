@@ -465,10 +465,12 @@ function getCandidatesByDuty(users, roleDisplay) {
 
       try{
         const res = await fetch(`/get-report-calendar?month=${month}&year=${year}&group=${encodeURIComponent(group)}`, { cache:"no-store" });
-        const text = await res.text();
-        if (!res.ok) throw new Error(text || "API error");
+const text = await res.text();
+console.log("GET REPORT RESPONSE:", text);
 
-        const dataCal = JSON.parse(text);
+if (!res.ok) throw new Error(text || "API error");
+
+const dataCal = JSON.parse(text);
 
         fullData = {};
         dataCal.forEach((item) => {
@@ -807,7 +809,7 @@ function getRankWeightFromName(fullName) {
   window.print();
 }
 
-    async function syncAllToGoogle(){
+   async function syncAllToGoogle(){
   const btn = document.getElementById("syncBtn");
   const month = Number(document.getElementById("monthSelect").value);
   const year = FIX_YEAR;
@@ -819,28 +821,42 @@ function getRankWeightFromName(fullName) {
   const old = btn.innerHTML;
   btn.innerHTML = "⏳ กำลังซิงค์...";
 
-  try{
+  try {
     const res = await fetch(
       `/sync-existing-shifts?month=${month}&year=${year}&group=${encodeURIComponent(group)}`,
-      { method:"POST" }
+      { method: "POST" }
     );
 
-    const data = await res.json();
+    const text = await res.text();
+    console.log("SYNC ALL RESPONSE:", text);
+
+    let data = {};
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      data = { message: text };
+    }
 
     if (res.ok) {
-      alert(`✅ ${data.message}`);
-      await renderReport(currentGroup);   // ⭐ โหลดตารางใหม่
+      alert(`✅ ${data.message || "ซิงค์สำเร็จ"}`);
     } else {
-      alert(`❌ Sync ไม่สำเร็จ: ${data.error || "unknown"}`);
+      alert(`❌ Sync ไม่สำเร็จ: ${data.error || data.message || "unknown"}`);
     }
-  } catch(err){
+  } catch (err) {
     console.error("SYNC ALL ERROR:", err);
     alert("❌ Server Error");
-  } finally{
+  } finally {
     btn.disabled = false;
     btn.innerHTML = old;
+
+    try {
+      await renderReport(currentGroup);
+    } catch (e) {
+      console.error("RENDER AFTER SYNC ERROR:", e);
+      location.reload();
+    }
   }
-}
+} 
 
 
 async function syncColonelDaily() {
